@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
 		<Authors>Mikko Pääkkönen</Authors>
 		<Company>Savonia University of Applied Sciences</Company>
 		<Copyright>Mikko Pääkkönen 2023</Copyright>
@@ -14,6 +14,8 @@
     <Nullable>enable</Nullable>
 		<Description>Savonia.Assignment.Tool is an installable CLI tool to help with assingment handling.</Description>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/savonia-cs/savonia-assignment-tool.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
   <ItemGroup>
