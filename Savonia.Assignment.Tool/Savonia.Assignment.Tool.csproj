@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <Version>1.0.1</Version>
+		<Authors>Mikko Pääkkönen</Authors>
+		<Company>Savonia University of Applied Sciences</Company>
+		<Copyright>Mikko Pääkkönen 2023</Copyright>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>savoniatool</ToolCommandName>
+    <PackageOutputPath>./nupkg</PackageOutputPath>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+		<Description>Savonia.Assignment.Tool is an installable CLI tool to help with assingment handling.</Description>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="7.0.0" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+  </ItemGroup>
+
+	<ItemGroup>
+		<None Include="README.md" Pack="true" PackagePath="\"/>
+	</ItemGroup>
+</Project>
