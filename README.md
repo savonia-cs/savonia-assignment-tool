@@ -10,10 +10,13 @@ dotnet tool install --global Savonia.Assignment.Tool
 Contains commands
 
 - solution pack: to create a zip package of your solution.
+- answers unpack: to unpack (unzip) all answers. Typically each person's answer is in a zip file. 
 
 ## Usage
 
 When installed the tool can be used as follows
+
+### To pack files
 
 - To pack all \*.cs files in all directories except *obj* and *tests* directories under current working directory to *sourcefiles.zip*
 
@@ -42,3 +45,13 @@ sourcefile.zip
 "**/obj"
 "**/tests"
 ```
+
+### To unpack answers
+
+- To unpack all answer zip files in a directory
+
+```dotnetcli
+savoniatool answers unpack
+```
+
+This will read all .zip files in current directory and unzip them. Each .zip is unzipped in a folder named the same as the .zip file without the .zip extension (e.g. *myanswer.zip* is unpacked to folder *myanswer*).

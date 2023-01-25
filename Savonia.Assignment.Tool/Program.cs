@@ -16,7 +16,7 @@ class Program
         // path default is current working directory if no path is defined
         var sourcePathOption = new Option<DirectoryInfo?>(
             name: "--path",
-            description: "Source path to pack",
+            description: "Source path to operate on",
             isDefault: true,
             parseArgument: result =>
             {
@@ -43,6 +43,7 @@ class Program
             getDefaultValue: () => false);
         verboseOption.AddAlias("-v");
 
+        // options and commands for solution handling
         var outputOption = new Option<string>(
             name: "--output",
             description: "Output zip file. This will overwrite possible existing file.",
@@ -53,11 +54,11 @@ class Program
             name: "--excludes",
             description: "Folders and files to exclude from the pack.",
             getDefaultValue: () => new List<string> { });
-        excludesOption.AllowMultipleArgumentsPerToken= true;
- 
+        excludesOption.AllowMultipleArgumentsPerToken = true;
+
         // by default include all files in all directories under the defined 'path'
         // more info: https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.filesystemglobbing.matcher?view=dotnet-plat-ext-7.0
-        
+
         // NOTE for Linux: 
         // **/* pattern works on bash version 4+ and 'globstar' option needs to be set on (it is off by default)
         // To set globstar on use command: shopt -s globstar
@@ -72,7 +73,7 @@ class Program
             name: "--includes",
             description: "Files and patterns to include to the pack.",
             getDefaultValue: () => new List<string> { "**/*" });
-        includesOption.AllowMultipleArgumentsPerToken= true;
+        includesOption.AllowMultipleArgumentsPerToken = true;
 
         var rootCommand = new RootCommand("Savonia tool for assingments");
         rootCommand.AddGlobalOption(sourcePathOption);
@@ -96,12 +97,30 @@ class Program
             sourcePathOption, outputOption, includesOption, excludesOption, verboseOption);
 
 
+        // options and commands for returned solution zip files bulk handling
+        var answersCommand = new Command("answers", "Work with multiple solutions sent as answers");
+        rootCommand.AddCommand(answersCommand);
+
+        var unpackCommand = new Command("unpack", "Unpack (unzip) all zip files in defined 'path'. Creates a folder for each zip file where the contents are unpacked and overwrites possible existing files.")
+            {
+                verboseOption
+            };
+        answersCommand.AddCommand(unpackCommand);
+
+        unpackCommand.SetHandler(async (path, verbose) =>
+            {
+                await UnpackAnswers(path!, verbose);
+            },
+            sourcePathOption, verboseOption);
+
+
+
         return await rootCommand.InvokeAsync(args);
     }
 
-    internal static async Task PackSolution(DirectoryInfo path, 
-                                            string output, 
-                                            List<string> includes, 
+    internal static async Task PackSolution(DirectoryInfo path,
+                                            string output,
+                                            List<string> includes,
                                             List<string> excludes,
                                             bool verbose)
     {
@@ -138,6 +157,38 @@ class Program
                     Console.WriteLine($"- adding file: {relativeFile}");
                 }
                 zipArchive.CreateEntryFromFile(relativeFile, relativeFile);
+            }
+        }
+    }
+
+    internal static async Task UnpackAnswers(DirectoryInfo path,
+                                            bool verbose)
+    {
+
+        var zipFiles = path.GetFiles().Where(f => f.Extension.Equals(".zip", StringComparison.InvariantCultureIgnoreCase));
+        var zipFilesCount = zipFiles.Count();
+        if (verbose)
+        {
+            Console.WriteLine($"Unpacking answers from folder '{path.Name}'");
+            Console.WriteLine($"- contains {zipFilesCount} .zip files");
+        }
+        if (zipFilesCount > 0)
+        {
+            int counter = 1;
+            if (verbose)
+            {
+                Console.WriteLine($"- unpacking files:");
+            }
+            foreach (var file in zipFiles)
+            {
+                using (ZipArchive zipArchive = ZipFile.OpenRead(file.FullName))
+                {
+                    if (verbose)
+                    {
+                        Console.WriteLine($"{counter++,4}: {file.Name}");
+                    }
+                    zipArchive.ExtractToDirectory(file.FullName.Replace(file.Extension, ""), true);
+                }
             }
         }
     }
