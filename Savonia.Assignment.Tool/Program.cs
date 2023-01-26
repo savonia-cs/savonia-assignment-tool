@@ -14,6 +14,11 @@ class Program
     //
     // savoniatool answers test --result-file "moodle.csv" --path ./ --test-harness "path-to-folder-with-tests" --source-filters "**/src/my_code.cs" --test-runner python --test-runner-command "python testall.py" --test-points 1 1 1 1 1
     // dotnet test result line regex: .*?\b.*?\bFailed:.*?\b, Passed:.*?\b, Skipped:.*?\b, Total:.*?\b, Duration:.*?\b.dll.*?
+    //
+    // make hash of source code for duplicate checks:
+    // 1. regex for clearing comments: https://stackoverflow.com/a/3524689
+    // 2. remove spaces, \r, \n 
+    // 3. create hash
     static async Task<int> Main(string[] args)
     {
         // path default is current working directory if no path is defined
