@@ -11,6 +11,9 @@ class Program
 {
     // common usage:
     // savoniatool solution pack --output allsrc.zip --excludes test tests bin obj --includes **/*.cs 
+    //
+    // savoniatool answers test --result-file "moodle.csv" --path ./ --test-harness "path-to-folder-with-tests" --source-filters "**/src/my_code.cs" --test-runner python --test-runner-command "python testall.py" --test-points 1 1 1 1 1
+    // dotnet test result line regex: .*?\b.*?\bFailed:.*?\b, Passed:.*?\b, Skipped:.*?\b, Total:.*?\b, Duration:.*?\b.dll.*?
     static async Task<int> Main(string[] args)
     {
         // path default is current working directory if no path is defined
