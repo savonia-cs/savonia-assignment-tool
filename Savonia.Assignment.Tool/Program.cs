@@ -4,6 +4,10 @@ using System.IO.Compression;
 using System.Collections.Concurrent;
 using System.CommandLine;
 using Microsoft.Extensions.FileSystemGlobbing;
+using System.Text;
+using System.Security.Cryptography;
+using System.Text.RegularExpressions;
+using System.Diagnostics;
 
 namespace Savonia.Assignment.Tool;
 
@@ -52,15 +56,15 @@ class Program
         verboseOption.AddAlias("-v");
 
         // options and commands for solution handling
-        var outputOption = new Option<string>(
+        var zipOutputOption = new Option<string>(
             name: "--output",
             description: "Output zip file. This will overwrite possible existing file.",
             getDefaultValue: () => "all.zip");
-        outputOption.AddAlias("-o");
+        zipOutputOption.AddAlias("-o");
 
         var excludesOption = new Option<List<string>>(
             name: "--excludes",
-            description: "Folders and files to exclude from the pack.",
+            description: "Folders and files to exclude.",
             getDefaultValue: () => new List<string> { });
         excludesOption.AllowMultipleArgumentsPerToken = true;
 
@@ -79,7 +83,7 @@ class Program
         // The default value set here in code will work as intented (to select all files in all directories) on all .NET supported OSes.
         var includesOption = new Option<List<string>>(
             name: "--includes",
-            description: "Files and patterns to include to the pack.",
+            description: "Folders and files to include.",
             getDefaultValue: () => new List<string> { "**/*" });
         includesOption.AllowMultipleArgumentsPerToken = true;
 
@@ -91,7 +95,7 @@ class Program
 
         var packCommand = new Command("pack", "Pack your solution to a zip file.")
             {
-                outputOption,
+                zipOutputOption,
                 excludesOption,
                 includesOption,
                 verboseOption
@@ -102,10 +106,10 @@ class Program
             {
                 await PackSolution(path!, output, includes, excludes, verbose);
             },
-            sourcePathOption, outputOption, includesOption, excludesOption, verboseOption);
+            sourcePathOption, zipOutputOption, includesOption, excludesOption, verboseOption);
 
 
-        // options and commands for returned solution zip files bulk handling
+        // options and commands for returned solution zip files (answers) bulk handling
         var answersCommand = new Command("answers", "Work with multiple solutions sent as answers");
         rootCommand.AddCommand(answersCommand);
 
@@ -121,7 +125,120 @@ class Program
             },
             sourcePathOption, verboseOption);
 
+        // options and commands for hash operations to compare files
+        var hashCommand = new Command("hash", "Create hashes from files and operate on them.");
+        rootCommand.AddCommand(hashCommand);
 
+        var csvOutputOption = new Option<string>(
+            name: "--output",
+            description: "Output csv file. This will overwrite possible existing file.",
+            getDefaultValue: () => "result.csv");
+        csvOutputOption.AddAlias("-o");
+
+        // regex filters for code comments in C#, see https://stackoverflow.com/a/3524689
+        var commentRegexFiltersOption = new Option<List<string>>(
+            name: "--regex-filters",
+            description: "Regex filters to find code comments.",
+            getDefaultValue: () => new List<string> { @"/\*(.*?)\*/", @"//(.*?)\r?\n", @"""((\\[^\n]|[^""\n])*)""", @"@(""[^""]*"")+" });
+        commentRegexFiltersOption.AllowMultipleArgumentsPerToken = true;
+
+        var startingLineCommentOption = new Option<string>(
+            name: "--starting-line-comment",
+            description: "Line comment start string",
+            getDefaultValue: () => "//");
+
+        var startingBlockCommentOption = new Option<string>(
+            name: "--starting-block-comment",
+            description: "Block comment start string",
+            getDefaultValue: () => "/*");
+
+        var filterSourceCodeOption = new Option<bool>(
+            name: "--filter-source-code",
+            description: "Filter files before hashing.",
+            getDefaultValue: () => true);
+
+        var createHashCommand = new Command("create", "Create comparable hashes of code files in defined 'path'.")
+            {
+                csvOutputOption,
+                includesOption,
+                excludesOption,
+                commentRegexFiltersOption,
+                startingBlockCommentOption,
+                startingLineCommentOption,
+                filterSourceCodeOption,
+                verboseOption
+            };
+        hashCommand.AddCommand(createHashCommand);
+
+        var hashIndexOption = new Option<int?>(
+            name: "--hash-index",
+            description: "Column index for the hash column. Null value assumes that hash is in the last column.",
+            getDefaultValue: () => null);
+
+        var sourceCsvFileOption = new Option<FileInfo>(
+            name: "--source",
+            description: "Source csv file.");
+
+        var compareHashCommand = new Command("compare", "Compare hashes from source file.")
+            {
+                sourceCsvFileOption,
+                csvOutputOption,
+                hashIndexOption,
+                verboseOption
+            };
+        hashCommand.AddCommand(compareHashCommand);
+
+        var fileIndexOption = new Option<int?>(
+            name: "--file-index",
+            description: "Column index for the file column. Null value assumes that file is in the first column.",
+            getDefaultValue: () => null);
+
+        var editorOption = new Option<string>(
+            name: "--editor",
+            description: "Editor executable name. The executable should be in the PATH.",
+            getDefaultValue: () => "code");
+
+        var editorParamsOption = new Option<string>(
+            name: "--editor-params",
+            description: "Parameters for the editor executable.",
+            getDefaultValue: () => "-n");
+
+        var openHashCommand = new Command("open", "Open match groups with defined editor.")
+            {
+                sourceCsvFileOption,
+                hashIndexOption,
+                fileIndexOption,
+                editorOption,
+                editorParamsOption,
+                verboseOption
+            };
+        hashCommand.AddCommand(openHashCommand);
+
+
+        createHashCommand.SetHandler(async (context) =>
+            {
+                await CreateHash(context.ParseResult.GetValueForOption(sourcePathOption)!,
+                                 context.ParseResult.GetValueForOption(csvOutputOption)!,
+                                 context.ParseResult.GetValueForOption(includesOption)!,
+                                 context.ParseResult.GetValueForOption(excludesOption)!,
+                                 context.ParseResult.GetValueForOption(commentRegexFiltersOption)!,
+                                 context.ParseResult.GetValueForOption(startingBlockCommentOption)!,
+                                 context.ParseResult.GetValueForOption(startingLineCommentOption)!,
+                                 context.ParseResult.GetValueForOption(filterSourceCodeOption),
+                                 context.ParseResult.GetValueForOption(verboseOption));
+            });
+
+        compareHashCommand.SetHandler(async (file, output, hashIndex, verbose) =>
+            {
+                await CompareHashes(file!, output, hashIndex, verbose);
+            },
+            sourceCsvFileOption, csvOutputOption, hashIndexOption, verboseOption);
+
+        openHashCommand.SetHandler(async (file, hashIndex, fileIndex, editor, editorParams, verbose) =>
+            {
+                await OpenHashes(file!, hashIndex, fileIndex, editor, editorParams, verbose);
+            },
+            sourceCsvFileOption, hashIndexOption, fileIndexOption, editorOption, editorParamsOption, verboseOption);
 
         return await rootCommand.InvokeAsync(args);
     }
@@ -199,6 +316,221 @@ class Program
                 }
             }
         }
+    }
+
+    internal static async Task CreateHash(DirectoryInfo path,
+                                            string output,
+                                            List<string> includes,
+                                            List<string> excludes,
+                                            List<string> commentRegex,
+                                            string startingBlockComment,
+                                            string startingLineComment,
+                                            bool filterFiles,
+                                            bool verbose)
+    {
+        // if 'output' is written to 'path' then set it to excludes list
+        string outputExclude = output.Replace(path.FullName, string.Empty);
+        excludes.Add(outputExclude);
+
+        Matcher matcher = new Matcher();
+        matcher.AddIncludePatterns(includes);
+        matcher.AddExcludePatterns(excludes);
+
+        if (verbose)
+        {
+            Console.WriteLine($"Creating hashes from folder '{path.Name}'");
+            Console.WriteLine($"- include pattern: {string.Join(" ", includes)}");
+            Console.WriteLine($"- exclude pattern: {string.Join(" ", excludes)}");
+            Console.WriteLine();
+            if (filterFiles)
+            {
+                Console.WriteLine($"- filters files with regex: {string.Join(" ", commentRegex)}");
+                Console.WriteLine($"- block comment start: {startingBlockComment}");
+                Console.WriteLine($"- line comment start: {startingLineComment}");
+                Console.WriteLine();
+            }
+            Console.WriteLine($"Result is saved to '{output}' file.");
+        }
+
+        if (File.Exists(output))
+        {
+            File.Delete(output);
+        }
+
+        StringBuilder resultBuilder = new StringBuilder();
+        foreach (string file in matcher.GetResultsInFullPath(path.FullName))
+        {
+            string relativeFile = file.Replace(path.FullName, "");
+            if (verbose)
+            {
+                Console.WriteLine($"- hashing file: {relativeFile}");
+            }
+            var fileContent = await File.ReadAllTextAsync(file);
+            if (filterFiles)
+            {
+                fileContent = FilterCommentsFromSourceFile(fileContent, commentRegex, startingBlockComment, startingLineComment);
+                fileContent = Condense(fileContent);
+            }
+            var hash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(fileContent)));
+
+            resultBuilder.AppendLine($"\"{relativeFile}\",\"{hash}\"");
+        }
+        await File.WriteAllTextAsync(output, resultBuilder.ToString());
+    }
+
+    internal static async Task CompareHashes(FileInfo file, string output, int? hashIndex, bool verbose)
+    {
+        // if hashIndex == null -> assume that hash value is in the last column
+
+        if (false == file.Exists)
+        {
+            Console.WriteLine($"Source file \"{file.FullName}\" does not exist.");
+            return;
+        }
+        if (verbose)
+        {
+            Console.WriteLine($"Reading hashes from source \"{file.Name}\"");
+        }
+        List<List<string>> data = await ReadCsvFile(file);
+        if (null == hashIndex && data.Any())
+        {
+            // assume that hash value is in the last column
+            hashIndex = data.First().Count() - 1;
+        }
+        var grouped = data.GroupBy(d => d[hashIndex.Value]);
+        // list only those with same hashes
+        var sameHashes = grouped.Where(g => g.Count() > 1);
+        var cc = Console.ForegroundColor;
+        if (sameHashes.Count() > 0)
+        {
+            using (var sw = File.CreateText(output))
+            {
+                foreach (var group in sameHashes)
+                {
+                    if (verbose)
+                    {
+                        Console.WriteLine($"- {group.Key}");
+                    }
+                    int counter = 1;
+                    foreach (var item in group)
+                    {
+                        string line = string.Join(",", item.Select(i => $"\"{i}\""));
+                        if (verbose)
+                        {
+                            Console.WriteLine($"{counter++,4}: {line}");
+                        }
+                        await sw.WriteLineAsync(line);
+                    }
+                    await sw.WriteLineAsync();
+                }
+            }
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"COLLISIONS! File \"{file.Name}\" contains {sameHashes.Count()} collisions.");
+        }
+        else
+        {
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"File \"{file.Name}\" did not contain collisions.");
+        }
+        Console.ForegroundColor = cc;
+    }
+
+    internal static async Task OpenHashes(FileInfo file, int? hashIndex, int? fileIndex, string editor, string editorParams, bool verbose)
+    {
+        if (false == file.Exists)
+        {
+            Console.WriteLine($"Source file \"{file.FullName}\" does not exist.");
+            return;
+        }
+        if (verbose)
+        {
+            Console.WriteLine($"Opening hash groups from source \"{file.Name}\" with editor \"{editor}\"");
+        }
+        List<List<string>> data = await ReadCsvFile(file);
+        if (null == hashIndex && data.Any())
+        {
+            // assume that hash value is in the last column
+            hashIndex = data.First().Count() - 1;
+        }
+        // if fileIndex == null -> assume that file is in the first column
+        fileIndex = fileIndex ?? 0;
+
+        var grouped = data.GroupBy(d => d[hashIndex.Value]);
+        var sameHashes = grouped.Where(g => g.Count() > 1);
+        if (sameHashes.Count() > 0)
+        {
+            foreach (var group in sameHashes)
+            {
+                string filesToOpen = string.Join(" ", group.Select(line => $"\"{line[fileIndex.Value]}\""));
+
+                if (verbose)
+                {
+                    Console.WriteLine($"- {group.Key}");
+                    Console.WriteLine($"  {editor} {editorParams} {string.Join(" ", filesToOpen)}");
+                }
+            
+                ProcessStartInfo psi = new ProcessStartInfo(editor, $"{editorParams} {string.Join(" ", filesToOpen)}");
+                psi.UseShellExecute = true;
+                psi.CreateNoWindow = true;
+                Process.Start(psi);
+            }
+        }
+        else
+        {
+            Console.WriteLine($"File \"{file.Name}\" did not contain collisions. Nothing to open.");
+        }
+    }
+
+    internal static async Task<List<List<string>>> ReadCsvFile(FileInfo file)
+    {
+        List<List<string>> data = new List<List<string>>();
+        using (var fs = file.OpenRead())
+        using (StreamReader sr = new StreamReader(fs))
+        {
+            string content = await sr.ReadToEndAsync();
+            content = content.Replace("\r", "");
+            var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var line in lines)
+            {
+                var columns = line.Split(','); // TODO: handle cases where columns content contains comma (,)
+                data.Add(columns.Select(c => c.Trim('"')).ToList());
+            }
+        }
+        return data;
+    }
+
+    /// <summary>
+    /// Filter out code comments.
+    /// </summary>
+    /// <param name="input"></param>
+    /// <param name="filters">Regex filters to match and filter out</param>
+    /// <param name="startingBlockComment"></param>
+    /// <param name="startingLineComment"></param>
+    /// <returns></returns>
+    internal static string FilterCommentsFromSourceFile(string input, IEnumerable<string> filters, string startingBlockComment = "/*", string startingLineComment = "//")
+    {
+        string filtered = Regex.Replace(input, string.Join("|", filters),
+            me =>
+            {
+                if (me.Value.StartsWith(startingBlockComment) || me.Value.StartsWith(startingLineComment))
+                {
+                    return me.Value.StartsWith(startingLineComment) ? Environment.NewLine : "";
+                }
+                // Keep the literal strings
+                return me.Value;
+            },
+            RegexOptions.Singleline);
+        return filtered;
+    }
+
+    /// <summary>
+    /// Filter out new lines, carriage returns and white spaces
+    /// </summary>
+    /// <param name="input"></param>
+    /// <returns></returns>
+    internal static string Condense(string input)
+    {
+        return input.Replace(" ", "", StringComparison.InvariantCultureIgnoreCase).Replace("\n", "", StringComparison.InvariantCultureIgnoreCase).Replace("\r", "", StringComparison.InvariantCultureIgnoreCase);
     }
 }
 
