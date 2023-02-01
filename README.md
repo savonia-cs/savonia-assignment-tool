@@ -11,6 +11,9 @@ Contains commands
 
 - solution pack: to create a zip package of your solution.
 - answers unpack: to unpack (unzip) all answers. Typically each person's answer is in a zip file. 
+- hash create: to create hash from selected file(s) in answers. Used to find duplicates.
+- hash compare: to find duplicates among the created hashes.
+- hash open: to open duplicates in an editor (by default VS Code) for manual checking.
 
 ## Usage
 
@@ -24,7 +27,7 @@ When installed the tool can be used as follows
 savoniatool solution pack --output sourcefiles.zip --verbose --includes "**/*.cs" --excludes "**/obj" "**/tests"
 ```
 
-*--includes* and *--excludes* options support multiple parameters without defining the option name multiple times.
+`--includes` and `--excludes` options support multiple values without defining the option name multiple times. Use double quotes (") to define arbitrary filters e.g. `"**/*"` for all files in all folders. Leaving the quotes out in MacOS or Linux will result in filter execution before providing the filter value to the option. Check different pattern formats from document [File globbing in .NET](https://learn.microsoft.com/en-us/dotnet/core/extensions/file-globbing#pattern-formats).
 
 The tool also supports Response files to provide the parameters.
 
@@ -55,3 +58,37 @@ savoniatool answers unpack
 ```
 
 This will read all .zip files in current directory and unzip them. Each .zip is unzipped in a folder named the same as the .zip file without the .zip extension (e.g. *myanswer.zip* is unpacked to folder *myanswer*).
+
+### To create hash
+
+- To create hash from selected file(s) in answers
+
+```dotnetcli
+savoniatool hash create -o hashes.csv --includes "**/*.cs"
+```
+
+This will find all *.cs* files in current directory and create a hash from the files. Code comments (line and block), white spaces, new lines and carriage returns are removed by default before creating the hash. Hashes are saved in the output file defined with option `-o` (or `--output`).
+
+`--filter-source-code` option uses flags arguments. Define multiple values with comma (,). E.g. `--filter-source-code whitespaces,newlines` to filter out white spaces and new lines. Set option `--filter-source-code none` to create hash from the file as is (without any filtering).
+
+### To check for duplicates
+
+- To check for duplicate hashes
+
+```dotnetcli
+savoniatool hash compare --source hashes.csv -o duplicates.csv
+```
+
+This will read hashes from source file and write duplicates to output file. By default hash values are read from the last column. Set `--hash-index` option with zero-based index for the hash column if it is not the last column. Define `-v` (or `--verbose`) to see the duplicates in terminal.
+
+### To open duplicates in editor
+
+- To open duplicate source files in editor for manual checking
+
+```dotnetcli
+savoniatool hash open --source duplicates.csv
+```
+
+This will read hash groups (files that create the same hash value) from source file and open the files with an editor. Uses VS Code as default option to open the files and assumes that the editor is in PATH to allow opening from terminal. Reads filename from the first column and hash value from the last column. Define zero-based index values for options `--file-index` and `--hash-index` if first and last column assumptions are not valid for source file.
+
+> NOTE! This will try to open as many instances of the editor as there are hash groups in the source file. Each instance will open all code files within the hash group. **This may result in excess amounts of editor instances**.

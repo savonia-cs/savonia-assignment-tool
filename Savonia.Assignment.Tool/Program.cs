@@ -152,10 +152,16 @@ class Program
             description: "Block comment start string",
             getDefaultValue: () => "/*");
 
-        var filterSourceCodeOption = new Option<bool>(
+        // var filterSourceCodeOption = new Option<bool>(
+        //     name: "--filter-source-code",
+        //     description: "Filter files before hashing.",
+        //     getDefaultValue: () => true);
+
+        var filterSourceCodeOption = new Option<SourceCodeFilters>(
             name: "--filter-source-code",
             description: "Filter files before hashing.",
-            getDefaultValue: () => true);
+            getDefaultValue: () => SourceCodeFilters.All);
+        
 
         var createHashCommand = new Command("create", "Create comparable hashes of code files in defined 'path'.")
             {
@@ -172,12 +178,31 @@ class Program
 
         var hashIndexOption = new Option<int?>(
             name: "--hash-index",
-            description: "Column index for the hash column. Null value assumes that hash is in the last column.",
+            description: "Column index (zero-based) for the hash column. Null value assumes that hash is in the last column.",
             getDefaultValue: () => null);
 
         var sourceCsvFileOption = new Option<FileInfo>(
             name: "--source",
-            description: "Source csv file.");
+            description: "Source csv file.",
+            isDefault: true,
+            parseArgument: result =>
+            {
+                if (result.Tokens.Count == 0)
+                {
+                    result.ErrorMessage = "Source csv file is not specified. Use --source option.";
+                    return null;
+                }
+                string? filePath = result.Tokens.Single().Value;
+                if (!File.Exists(filePath))
+                {
+                    result.ErrorMessage = "File does not exist";
+                    return null;
+                }
+                else
+                {
+                    return new FileInfo(filePath);
+                }
+        });
 
         var compareHashCommand = new Command("compare", "Compare hashes from source file.")
             {
@@ -190,7 +215,7 @@ class Program
 
         var fileIndexOption = new Option<int?>(
             name: "--file-index",
-            description: "Column index for the file column. Null value assumes that file is in the first column.",
+            description: "Column index (zero-based) for the file column. Null value assumes that file is in the first column.",
             getDefaultValue: () => null);
 
         var editorOption = new Option<string>(
@@ -325,7 +350,8 @@ class Program
                                             List<string> commentRegex,
                                             string startingBlockComment,
                                             string startingLineComment,
-                                            bool filterFiles,
+                                            // bool filterFiles,
+                                            SourceCodeFilters filterFiles,
                                             bool verbose)
     {
         // if 'output' is written to 'path' then set it to excludes list
@@ -342,11 +368,22 @@ class Program
             Console.WriteLine($"- include pattern: {string.Join(" ", includes)}");
             Console.WriteLine($"- exclude pattern: {string.Join(" ", excludes)}");
             Console.WriteLine();
-            if (filterFiles)
+            if (filterFiles != SourceCodeFilters.None)
             {
-                Console.WriteLine($"- filters files with regex: {string.Join(" ", commentRegex)}");
-                Console.WriteLine($"- block comment start: {startingBlockComment}");
-                Console.WriteLine($"- line comment start: {startingLineComment}");
+                if (filterFiles.HasFlag(SourceCodeFilters.Comments))
+                {
+                    Console.WriteLine($"- filters comments from files with regex: {string.Join(" ", commentRegex)}");
+                    Console.WriteLine($"- block comment start: {startingBlockComment}");
+                    Console.WriteLine($"- line comment start: {startingLineComment}");
+                }
+                if (filterFiles.HasFlag(SourceCodeFilters.NewLines))
+                {
+                    Console.WriteLine($"- filters new lines");
+                }
+                if (filterFiles.HasFlag(SourceCodeFilters.WhiteSpaces))
+                {
+                    Console.WriteLine($"- filters white spaces");
+                }
                 Console.WriteLine();
             }
             Console.WriteLine($"Result is saved to '{output}' file.");
@@ -361,15 +398,23 @@ class Program
         foreach (string file in matcher.GetResultsInFullPath(path.FullName))
         {
             string relativeFile = file.Replace(path.FullName, "");
+
             if (verbose)
             {
                 Console.WriteLine($"- hashing file: {relativeFile}");
             }
             var fileContent = await File.ReadAllTextAsync(file);
-            if (filterFiles)
+            if (filterFiles.HasFlag(SourceCodeFilters.Comments))
             {
                 fileContent = FilterCommentsFromSourceFile(fileContent, commentRegex, startingBlockComment, startingLineComment);
-                fileContent = Condense(fileContent);
+            }
+            if (filterFiles.HasFlag(SourceCodeFilters.NewLines))
+            {
+                fileContent = fileContent.Replace("\n", "").Replace("\r", "");
+            }
+            if (filterFiles.HasFlag(SourceCodeFilters.WhiteSpaces))
+            {
+                fileContent = fileContent.Replace(" ", "");
             }
             var hash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(fileContent)));
 
@@ -468,7 +513,7 @@ class Program
                     Console.WriteLine($"- {group.Key}");
                     Console.WriteLine($"  {editor} {editorParams} {string.Join(" ", filesToOpen)}");
                 }
-            
+
                 ProcessStartInfo psi = new ProcessStartInfo(editor, $"{editorParams} {string.Join(" ", filesToOpen)}");
                 psi.UseShellExecute = true;
                 psi.CreateNoWindow = true;
@@ -523,14 +568,14 @@ class Program
         return filtered;
     }
 
-    /// <summary>
-    /// Filter out new lines, carriage returns and white spaces
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
-    internal static string Condense(string input)
+    [Flags]
+    public enum SourceCodeFilters
     {
-        return input.Replace(" ", "", StringComparison.InvariantCultureIgnoreCase).Replace("\n", "", StringComparison.InvariantCultureIgnoreCase).Replace("\r", "", StringComparison.InvariantCultureIgnoreCase);
+        None = 0,
+        Comments = 1,
+        WhiteSpaces = 2,
+        NewLines = 4,
+        All = Comments | WhiteSpaces | NewLines
     }
 }
 
