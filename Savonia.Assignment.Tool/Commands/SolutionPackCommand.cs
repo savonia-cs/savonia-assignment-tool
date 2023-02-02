@@ -27,7 +27,7 @@ public class SolutionPackCommand : Command
         GlobalOptions.SourcePathOption, zipOutputOption, CommonOptions.IncludesOption, CommonOptions.ExcludesOption, GlobalOptions.VerboseOption);
     }
 
-    internal async Task Handle(DirectoryInfo path,
+    async Task Handle(DirectoryInfo path,
                                     string output,
                                     List<string> includes,
                                     List<string> excludes,

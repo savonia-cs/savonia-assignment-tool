@@ -9,6 +9,7 @@ public class AnswersCommand : Command
     public AnswersCommand() : base("answers", "Work with multiple solutions sent as answers")
     {
         AddCommand(new AnswersUnpackCommand());
+        AddCommand(new AnswersTestCommand());
     }
 }
 

@@ -32,7 +32,7 @@ public class HashCompareCommand : Command
 
     }
 
-    internal async Task Handle(FileInfo file, string output, int? hashIndex, bool verbose)
+    async Task Handle(FileInfo file, string output, int? hashIndex, bool verbose)
     {
         // if hashIndex == null -> assume that hash value is in the last column
 

@@ -14,7 +14,7 @@ public class AnswersUnpackCommand : Command
             GlobalOptions.SourcePathOption, GlobalOptions.VerboseOption);
     }
 
-    internal async Task Handle(DirectoryInfo path,
+    async Task Handle(DirectoryInfo path,
                                         bool verbose)
     {
 
