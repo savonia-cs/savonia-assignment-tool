@@ -40,8 +40,8 @@ public class HashCreateCommand : Command
             getDefaultValue: () => SourceCodeFilters.All);
 
         Add(csvOutputOption);
-        Add(GlobalOptions.IncludesOption);
-        Add(GlobalOptions.ExcludesOption);
+        Add(CommonOptions.IncludesOption);
+        Add(CommonOptions.ExcludesOption);
         Add(commentRegexFiltersOption);
         Add(startingBlockCommentOption);
         Add(startingLineCommentOption);
@@ -51,8 +51,8 @@ public class HashCreateCommand : Command
             {
                 await Handle(context.ParseResult.GetValueForOption(GlobalOptions.SourcePathOption)!,
                                  context.ParseResult.GetValueForOption(csvOutputOption)!,
-                                 context.ParseResult.GetValueForOption(GlobalOptions.IncludesOption)!,
-                                 context.ParseResult.GetValueForOption(GlobalOptions.ExcludesOption)!,
+                                 context.ParseResult.GetValueForOption(CommonOptions.IncludesOption)!,
+                                 context.ParseResult.GetValueForOption(CommonOptions.ExcludesOption)!,
                                  context.ParseResult.GetValueForOption(commentRegexFiltersOption)!,
                                  context.ParseResult.GetValueForOption(startingBlockCommentOption)!,
                                  context.ParseResult.GetValueForOption(startingLineCommentOption)!,
@@ -61,7 +61,7 @@ public class HashCreateCommand : Command
             });            
     }
 
-    internal static async Task Handle(DirectoryInfo path,
+    internal async Task Handle(DirectoryInfo path,
                                             string output,
                                             List<string> includes,
                                             List<string> excludes,
@@ -149,7 +149,7 @@ public class HashCreateCommand : Command
     /// <param name="startingBlockComment"></param>
     /// <param name="startingLineComment"></param>
     /// <returns></returns>
-    internal static string FilterCommentsFromSourceFile(string input, IEnumerable<string> filters, string startingBlockComment = "/*", string startingLineComment = "//")
+    internal string FilterCommentsFromSourceFile(string input, IEnumerable<string> filters, string startingBlockComment = "/*", string startingLineComment = "//")
     {
         string filtered = Regex.Replace(input, string.Join("|", filters),
             me =>

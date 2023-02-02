@@ -14,8 +14,8 @@ public class AnswersUnpackCommand : Command
             GlobalOptions.SourcePathOption, GlobalOptions.VerboseOption);
     }
 
-        internal static async Task Handle(DirectoryInfo path,
-                                            bool verbose)
+    internal async Task Handle(DirectoryInfo path,
+                                        bool verbose)
     {
 
         var zipFiles = path.GetFiles().Where(f => f.Extension.Equals(".zip", StringComparison.InvariantCultureIgnoreCase));

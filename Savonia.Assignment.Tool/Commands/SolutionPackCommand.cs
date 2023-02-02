@@ -6,9 +6,9 @@ namespace Savonia.Assignment.Tool.Commands;
 
 
 
-internal class PackCommand : Command
+public class SolutionPackCommand : Command
 {
-    public PackCommand() : base("pack", "Pack your solution to a zip file.")
+    public SolutionPackCommand() : base("pack", "Pack your solution to a zip file.")
     {
         var zipOutputOption = new Option<string>(
             name: "--output",
@@ -17,17 +17,17 @@ internal class PackCommand : Command
         zipOutputOption.AddAlias("-o");
 
         Add(zipOutputOption);
-        Add(GlobalOptions.ExcludesOption);
-        Add(GlobalOptions.IncludesOption);
+        Add(CommonOptions.ExcludesOption);
+        Add(CommonOptions.IncludesOption);
 
         this.SetHandler(async (path, output, includes, excludes, verbose) =>
         {
             await Handle(path!, output, includes, excludes, verbose);
         },
-        GlobalOptions.SourcePathOption, zipOutputOption, GlobalOptions.IncludesOption, GlobalOptions.ExcludesOption, GlobalOptions.VerboseOption);
+        GlobalOptions.SourcePathOption, zipOutputOption, CommonOptions.IncludesOption, CommonOptions.ExcludesOption, GlobalOptions.VerboseOption);
     }
 
-    internal static async Task Handle(DirectoryInfo path,
+    internal async Task Handle(DirectoryInfo path,
                                     string output,
                                     List<string> includes,
                                     List<string> excludes,

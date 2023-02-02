@@ -8,7 +8,6 @@ public class SolutionCommand : Command
 {
     public SolutionCommand() : base("solution", "Work with your solution to an assignment")
     {
-        AddCommand(new PackCommand());
+        AddCommand(new SolutionPackCommand());
     }
 }
-

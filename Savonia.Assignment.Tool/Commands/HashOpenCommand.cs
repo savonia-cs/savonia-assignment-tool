@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.FileSystemGlobbing;
+using Savonia.Assignment.Tool.Helpers;
 
 namespace Savonia.Assignment.Tool.Commands;
 
@@ -12,34 +13,6 @@ public class HashOpenCommand : Command
 {
     public HashOpenCommand() : base("open", "Open match groups with defined editor.")
     {
-        var hashIndexOption = new Option<int?>(
-            name: "--hash-index",
-            description: "Column index (zero-based) for the hash column. Null value assumes that hash is in the last column.",
-            getDefaultValue: () => null);
-
-        var sourceCsvFileOption = new Option<FileInfo>(
-            name: "--source",
-            description: "Source csv file.",
-            isDefault: true,
-            parseArgument: result =>
-            {
-                if (result.Tokens.Count == 0)
-                {
-                    result.ErrorMessage = "Source csv file is not specified. Use --source option.";
-                    return null;
-                }
-                string? filePath = result.Tokens.Single().Value;
-                if (!File.Exists(filePath))
-                {
-                    result.ErrorMessage = "File does not exist";
-                    return null;
-                }
-                else
-                {
-                    return new FileInfo(filePath);
-                }
-            });
-
         var fileIndexOption = new Option<int?>(
             name: "--file-index",
             description: "Column index (zero-based) for the file column. Null value assumes that file is in the first column.",
@@ -55,8 +28,8 @@ public class HashOpenCommand : Command
             description: "Parameters for the editor executable.",
             getDefaultValue: () => "-n");
 
-        Add(sourceCsvFileOption);
-        Add(hashIndexOption);
+        Add(CommonOptions.SourceCsvFileOption);
+        Add(HashCommand.HashIndexOption);
         Add(fileIndexOption);
         Add(editorOption);
         Add(editorParamsOption);
@@ -65,10 +38,10 @@ public class HashOpenCommand : Command
             {
                 await Handle(file!, hashIndex, fileIndex, editor, editorParams, verbose);
             },
-            sourceCsvFileOption, hashIndexOption, fileIndexOption, editorOption, editorParamsOption, GlobalOptions.VerboseOption);        
+            CommonOptions.SourceCsvFileOption, HashCommand.HashIndexOption, fileIndexOption, editorOption, editorParamsOption, GlobalOptions.VerboseOption);        
     }
 
-    internal static async Task Handle(FileInfo file, int? hashIndex, int? fileIndex, string editor, string editorParams, bool verbose)
+    internal async Task Handle(FileInfo file, int? hashIndex, int? fileIndex, string editor, string editorParams, bool verbose)
     {
         if (false == file.Exists)
         {
@@ -79,7 +52,7 @@ public class HashOpenCommand : Command
         {
             Console.WriteLine($"Opening hash groups from source \"{file.Name}\" with editor \"{editor}\"");
         }
-        List<List<string>> data = await HashCommand.ReadCsvFile(file);
+        List<List<string>> data = await file.ReadCsv();
         if (null == hashIndex && data.Any())
         {
             // assume that hash value is in the last column

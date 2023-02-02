@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.FileSystemGlobbing;
+using Savonia.Assignment.Tool.Helpers;
 
 namespace Savonia.Assignment.Tool.Commands;
 
@@ -17,47 +18,21 @@ public class HashCompareCommand : Command
             getDefaultValue: () => "result.csv");
         csvOutputOption.AddAlias("-o");
 
-        var hashIndexOption = new Option<int?>(
-            name: "--hash-index",
-            description: "Column index (zero-based) for the hash column. Null value assumes that hash is in the last column.",
-            getDefaultValue: () => null);
 
-        var sourceCsvFileOption = new Option<FileInfo>(
-            name: "--source",
-            description: "Source csv file.",
-            isDefault: true,
-            parseArgument: result =>
-            {
-                if (result.Tokens.Count == 0)
-                {
-                    result.ErrorMessage = "Source csv file is not specified. Use --source option.";
-                    return null;
-                }
-                string? filePath = result.Tokens.Single().Value;
-                if (!File.Exists(filePath))
-                {
-                    result.ErrorMessage = "File does not exist";
-                    return null;
-                }
-                else
-                {
-                    return new FileInfo(filePath);
-                }
-            });
 
-        Add(sourceCsvFileOption);
+        Add(CommonOptions.SourceCsvFileOption);
         Add(csvOutputOption);
-        Add(hashIndexOption);
+        Add(HashCommand.HashIndexOption);
 
         this.SetHandler(async (file, output, hashIndex, verbose) =>
             {
                 await Handle(file!, output, hashIndex, verbose);
             },
-            sourceCsvFileOption, csvOutputOption, hashIndexOption, GlobalOptions.VerboseOption);
+            CommonOptions.SourceCsvFileOption, csvOutputOption, HashCommand.HashIndexOption, GlobalOptions.VerboseOption);
 
     }
 
-    internal static async Task Handle(FileInfo file, string output, int? hashIndex, bool verbose)
+    internal async Task Handle(FileInfo file, string output, int? hashIndex, bool verbose)
     {
         // if hashIndex == null -> assume that hash value is in the last column
 
@@ -70,7 +45,7 @@ public class HashCompareCommand : Command
         {
             Console.WriteLine($"Reading hashes from source \"{file.Name}\"");
         }
-        List<List<string>> data = await HashCommand.ReadCsvFile(file);
+        List<List<string>> data = await file.ReadCsv();
         if (null == hashIndex && data.Any())
         {
             // assume that hash value is in the last column
@@ -113,8 +88,4 @@ public class HashCompareCommand : Command
         }
         Console.ForegroundColor = cc;
     }
-
 }
-
-
-
