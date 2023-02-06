@@ -23,6 +23,36 @@ public static class FileHelpers
             }
         }
         return data;
-    }    
+    }
+
+    /// <summary>
+    /// Split a directory in its components.
+    /// Input e.g: a/b/c/d.
+    /// Output: d, c, b, a.
+    /// </summary>
+    /// <param name="di"></param>
+    /// <returns></returns>
+    public static IEnumerable<string> DirectorySplit(this DirectoryInfo? di)
+    {
+        while (di != null)
+        {
+            yield return di.Name;
+            di = di.Parent;
+        }
+    }
+
+    /// <summary>
+    /// Return one part of the directory path.
+    /// Path e.g.: a/b/c/d. PartNr=0 is a, Nr 2 = c.
+    /// </summary>
+    /// <param name="di"></param>
+    /// <param name="index"></param>
+    /// <returns></returns>
+    public static string DirectoryPart(this DirectoryInfo di, int index)
+    {
+        string[] parts = di.DirectorySplit().ToArray();
+        int l = parts.Length;
+        return index >= 0 && index < l ? parts[l - 1 - index] : "";
+    }
 }
 
