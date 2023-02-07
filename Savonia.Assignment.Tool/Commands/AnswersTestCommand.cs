@@ -77,8 +77,8 @@ public class AnswersTestCommand : Command
 
         var testLogfileOption = new Option<string>(
             name: "--test-log-file",
-            description: "Test log file used to read test results. Leave empty when actual tests are run. Use when only results are shown.",
-            getDefaultValue: () => "");
+            description: "Test log file name used to write and read test results. The file is relative to TestResults folder in each test directory.",
+            getDefaultValue: () => "savoniatool.trx");
 
         Add(csvOutputOption);
         Add(testHarnessOption);
@@ -104,11 +104,25 @@ public class AnswersTestCommand : Command
             });
     }
 
-    async Task Handle(DirectoryInfo path, string output, DirectoryInfo testHarness, string testDataPrefix, List<int> testPoints, List<string> includes, List<string> excludes, TestSteps steps, string logfile, bool verbose)
+    async Task Handle(DirectoryInfo path, 
+                        string output, 
+                        DirectoryInfo testHarness, 
+                        string testDataPrefix, 
+                        List<int> testPoints, 
+                        List<string> includes, 
+                        List<string> excludes, 
+                        TestSteps steps, 
+                        string logfile, 
+                        bool verbose)
     {
-        // Console.WriteLine("This will eventually run tests on answers...");
+        if (steps == TestSteps.None)
+        {
+            // no action is specified
+            Console.WriteLine($"No action is specified in --steps option. Please, use one or combination from {string.Join(" ", Enum.GetNames<TestSteps>())}");
+            return;
+        }
 
-
+        Directory.SetCurrentDirectory(path.FullName);
         var answerDirectories = path.GetDirectories();
 
         if (steps.HasFlag(TestSteps.Copy))
@@ -122,8 +136,8 @@ public class AnswersTestCommand : Command
 
         if (steps.HasFlag(TestSteps.Test))
         {
-            // run tests, will overwrite defined logfile
-            logfile = await RunTests(testDataPrefix, verbose, answerDirectories);
+            // run tests
+            await RunTests(testDataPrefix, verbose, answerDirectories, logfile);
         }
         if (steps.HasFlag(TestSteps.Results))
         {
@@ -182,6 +196,7 @@ public class AnswersTestCommand : Command
             var parts = testResultParts.Except(pathParts);
             // test folder name is in index 1 (index 0 is the TestResults folder), student is in the last index
             var student = parts.Last();
+            // NOTE! it is assumed that parts has more than two (2) items.
             var test = parts.Skip(1).First();
 
             // load test results trx file
@@ -199,27 +214,28 @@ public class AnswersTestCommand : Command
             {
                 resultNode = doc.SelectSingleNode("//ResultSummary");
             }
-            // var resultValue = resultNode.Attributes.GetNamedItem("outcome");
             var resultValue = resultNode?.Attributes.GetNamedItem("outcome");
             if (verbose)
             {
                 Console.WriteLine($"- {student} / {test} = {resultValue?.Value}");
-                // Console.WriteLine($"{doc.WriteTo()}");
             }
             results.Add((student, test, resultValue?.Value));
         }
         return results;
     }
 
-    private async Task<string> RunTests(string testDataPrefix, bool verbose, DirectoryInfo[] answerDirectories)
+    private async Task RunTests(string testDataPrefix, bool verbose, DirectoryInfo[] answerDirectories, string logfile)
     {
         // run tests on each answer directory
+        bool testDataPrefixHasValue = false == string.IsNullOrEmpty(testDataPrefix);
         if (verbose)
         {
             Console.WriteLine($"\nRunning tests");
+            if (testDataPrefixHasValue)
+            {
+                Console.WriteLine($"- Setting environment variable TEST_DATA_PREFIX={testDataPrefix}");
+            }
         }
-        DateTime now = DateTime.Now;
-        string logFilename = $"{now.ToString("yyyy-MM-dd_HH_mm")}-savoniatool.trx";
         List<Task> testProcesses = new List<Task>();
         foreach (var answerDir in answerDirectories)
         {
@@ -227,9 +243,9 @@ public class AnswersTestCommand : Command
             {
                 Console.WriteLine($"- {answerDir.Name}");
             }
-            ProcessStartInfo psi = new ProcessStartInfo(@"dotnet", $"test --logger \"trx;logfilename={logFilename}\"");
+            ProcessStartInfo psi = new ProcessStartInfo(@"dotnet", $"test --logger \"trx;logfilename={logfile}\"");
             psi.WorkingDirectory = answerDir.FullName;
-            if (false == string.IsNullOrEmpty(testDataPrefix))
+            if (testDataPrefixHasValue)
             {
                 psi.EnvironmentVariables.Add("TEST_DATA_PREFIX", testDataPrefix);
             }
@@ -239,7 +255,6 @@ public class AnswersTestCommand : Command
             testProcesses.Add(p.WaitForExitAsync());
         }
         await Task.WhenAll(testProcesses.ToArray());
-        return logFilename;
     }
 
     private void CopyTestHarness(DirectoryInfo testHarness, bool verbose, List<string> testHarnessFilesToCopy, DirectoryInfo[] answerDirectories)
@@ -289,5 +304,13 @@ public enum TestSteps
     Test = 2,
     Results = 4,
     All = Copy | Test | Results
+}
+
+public enum ResultFileType
+{
+    // general CSV file
+    CSV = 1,
+    // CSV file from Savonia's Moodle for an assignment
+    Moodle = 2
 }
 
