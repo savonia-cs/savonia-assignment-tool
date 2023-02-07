@@ -21,8 +21,9 @@ class Program
         rootCommand.AddGlobalOption(GlobalOptions.VerboseOption);
 
         rootCommand.AddCommand(new SolutionCommand());
-        rootCommand.AddCommand(new AnswersCommand());
+        rootCommand.AddCommand(new SubmissionsCommand());
         rootCommand.AddCommand(new HashCommand());
+        rootCommand.AddCommand(new MoodleCommand());
 
         return await rootCommand.InvokeAsync(args);
     }

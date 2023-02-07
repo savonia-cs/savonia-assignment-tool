@@ -3,9 +3,9 @@ using System.IO.Compression;
 
 namespace Savonia.Assignment.Tool.Commands;
 
-public class AnswersUnpackCommand : Command
+public class SubmissionsUnpackCommand : Command
 {
-    public AnswersUnpackCommand() : base("unpack", "Unpack (unzip) all zip files in defined 'path'. Creates a folder for each zip file where the contents are unpacked and overwrites possible existing files.")
+    public SubmissionsUnpackCommand() : base("unpack", "Unpack (unzip) all zip files in defined 'path'. Creates a folder for each zip file where the contents are unpacked and overwrites possible existing files.")
     {
         this.SetHandler(async (path, verbose) =>
             {

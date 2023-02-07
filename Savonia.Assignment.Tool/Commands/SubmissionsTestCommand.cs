@@ -4,17 +4,18 @@ using System.IO.Compression;
 using System.Text;
 using System.Xml;
 using Microsoft.Extensions.FileSystemGlobbing;
+using NReco.Csv;
 using Savonia.Assignment.Tool.Helpers;
 
 namespace Savonia.Assignment.Tool.Commands;
 
-public class AnswersTestCommand : Command
+public class SubmissionsTestCommand : Command
 {
-    // savoniatool answers test --result-file "moodle.csv" --path ./ --test-harness "path-to-folder-with-tests" --test-runner python --test-runner-command "python testall.py" --test-points 1 1 1 1 1
+    // savoniatool submissions test --result-file "moodle.csv" --path ./ --test-harness "path-to-folder-with-tests" --test-runner python --test-runner-command "python testall.py" --test-points 1 1 1 1 1
     // dotnet test result line regex: .*?\b.*?\bFailed:.*?\b, Passed:.*?\b, Skipped:.*?\b, Total:.*?\b, Duration:.*?\b.dll.*?
 
     /*
-        1. unpack answers 
+        1. unpack submissions 
         2. set environment variable TEST_DATA_PREFIX=real to run tests with realtestdata.csv|json
         3. copy tests and project files to each answer folder
             3.1. exclude bin, obj, TestResults, src, solution folders when copying tests and project files
@@ -26,7 +27,7 @@ public class AnswersTestCommand : Command
             5.1. use path as student identifier
     */
 
-    public AnswersTestCommand() : base("test", "Run tests for each answer and report results to a csv file.")
+    public SubmissionsTestCommand() : base("test", "Run tests for each answer and report results to a csv file.")
     {
         var csvOutputOption = new Option<string>(
             name: "--output",
@@ -80,6 +81,11 @@ public class AnswersTestCommand : Command
             description: "Test log file name used to write and read test results. The file is relative to TestResults folder in each test directory.",
             getDefaultValue: () => "savoniatool.trx");
 
+        var moodleCsvInputOption = new Option<string>(
+            name: "--moodle-csv",
+            description: "Moodle csv file. When specified to an existing file the results are combined to with this file.",
+            getDefaultValue: () => "");
+
         Add(csvOutputOption);
         Add(testHarnessOption);
         Add(testDataPrefixOption);
@@ -88,6 +94,7 @@ public class AnswersTestCommand : Command
         Add(CommonOptions.IncludesOption);
         Add(testStepsOption);
         Add(testLogfileOption);
+        Add(moodleCsvInputOption);
 
         this.SetHandler(async (context) =>
             {
@@ -100,19 +107,21 @@ public class AnswersTestCommand : Command
                                  context.ParseResult.GetValueForOption(CommonOptions.ExcludesOption)!,
                                  context.ParseResult.GetValueForOption(testStepsOption),
                                  context.ParseResult.GetValueForOption(testLogfileOption),
+                                 context.ParseResult.GetValueForOption(moodleCsvInputOption),
                                  context.ParseResult.GetValueForOption(GlobalOptions.VerboseOption));
             });
     }
 
-    async Task Handle(DirectoryInfo path, 
-                        string output, 
-                        DirectoryInfo testHarness, 
-                        string testDataPrefix, 
-                        List<int> testPoints, 
-                        List<string> includes, 
-                        List<string> excludes, 
-                        TestSteps steps, 
-                        string logfile, 
+    async Task Handle(DirectoryInfo path,
+                        string output,
+                        DirectoryInfo testHarness,
+                        string testDataPrefix,
+                        List<int> testPoints,
+                        List<string> includes,
+                        List<string> excludes,
+                        TestSteps steps,
+                        string logfile,
+                        string moodleCsvInput,
                         bool verbose)
     {
         if (steps == TestSteps.None)
@@ -144,18 +153,109 @@ public class AnswersTestCommand : Command
             // parse results summary from log files
             var results = GetTestResults(path, logfile, verbose);
             var resultsWithPoints = AddTestPointsToResults(testPoints, verbose, results);
+            await WriteResultFile(output, resultsWithPoints, moodleCsvInput, verbose);
+        }
+    }
+
+    private async Task WriteResultFile(string output, List<(string student, int totalPoints, string testsSummary)> resultsWithPoints, string moodleCsvInput, bool verbose)
+    {
+        if (string.IsNullOrWhiteSpace(moodleCsvInput))
+        {
+            // write results to common CSV file
             if (File.Exists(output))
             {
                 File.Delete(output);
             }
-            await File.AppendAllLinesAsync(output, resultsWithPoints);
+
+            using (var sw = new StreamWriter(File.OpenWrite(output)))
+            {
+                var csvWriter = new CsvWriter(sw);
+                foreach (var item in resultsWithPoints)
+                {
+                    csvWriter.WriteField(item.student);
+                    csvWriter.WriteField(item.testsSummary);
+                    csvWriter.WriteField(item.totalPoints.ToString());
+                    csvWriter.NextRecord();
+                }
+            }
+        }
+        else
+        {
+            // combine results to moodle csv file
+            if (false == File.Exists(moodleCsvInput))
+            {
+                Console.WriteLine($"Moodle file '{moodleCsvInput}' does not exist. Cannot combine results to the file.");
+                return;
+            }
+            List<string[]> moodleContent = new List<string[]>();
+            int moodleCsvFieldsCount = 0;
+            using (var streamRdr = new StreamReader(File.OpenRead(moodleCsvInput)))
+            {
+                var csvReader = new CsvReader(streamRdr, ",");
+                while (csvReader.Read())
+                {
+                    moodleCsvFieldsCount = csvReader.FieldsCount;
+                    string[] row = new string[moodleCsvFieldsCount];
+                    for (int i = 0; i < moodleCsvFieldsCount; i++)
+                    {
+                        row[i] = csvReader[i];
+                    }
+                    moodleContent.Add(row);
+                }
+            }
+            int moodleFieldIndexForId = 0;
+            int moodleFieldIndexForName = 1;
+            int moodleFieldIndexForGrade = 4;
+            int moodleFieldIndexForFeedbackComments = moodleCsvFieldsCount - 1; // the last field
+            
+            char studentTokenizer = '_';
+            int studentIdTokenIndex = 1;
+
+            if (verbose)
+            {
+                Console.WriteLine($"\nMoodle content");
+                int counter = 1;
+                foreach (var row in moodleContent)
+                {
+                    Console.WriteLine($"{counter++,4}: {string.Join("|", row)}");
+                }
+
+                Console.WriteLine($"\nResult tokens");
+            }
+
+            foreach (var item in resultsWithPoints)
+            {
+                var tokens = item.student.Split(studentTokenizer, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (verbose)
+                {
+                    Console.WriteLine($"{string.Join("|", tokens)}");
+                }
+                var moodleRow = moodleContent.FirstOrDefault(r => r[moodleFieldIndexForId].Contains(tokens[studentIdTokenIndex]));
+                if (null != moodleRow)
+                {
+                    moodleRow[moodleFieldIndexForGrade] = item.totalPoints.ToString();
+                    moodleRow[moodleFieldIndexForFeedbackComments] = item.testsSummary;
+                }
+            }
+            using (var sw = new StreamWriter(File.OpenWrite(output)))
+            {
+                var csvWriter = new CsvWriter(sw);
+                foreach (var row in moodleContent)
+                {
+                    foreach (var col in row)
+                    {
+                        csvWriter.WriteField(col);    
+                    }
+                    csvWriter.NextRecord();
+                }
+            }            
         }
     }
 
-    private List<string> AddTestPointsToResults(List<int> testPoints, bool verbose, List<(string student, string test, string result)> results)
+    private List<(string student, int totalPoints, string testsSummary)> AddTestPointsToResults(List<int> testPoints, bool verbose, List<(string student, string test, string result)> results)
     {
         var groupedByStudent = results.GroupBy(r => r.student);
-        List<string> resultStrings = new List<string>();
+        List<(string student, int totalPoints, string testsSummary)> result = new List<(string, int, string)>();
         foreach (var group in groupedByStudent)
         {
             var points = group.OrderBy(g => g.test).Select((g, i) =>
@@ -164,17 +264,17 @@ public class AnswersTestCommand : Command
                 var isPassed = g.result.Equals("completed", StringComparison.InvariantCultureIgnoreCase);
                 return (g.test, points: (isPassed ? points : 0));
             });
-            resultStrings.Add(string.Join(",", $"\"{group.Key}\"", $"\"{string.Join(", ", points.Select(p => $"{p.test}: {p.points}"))}\"", $"\"{points.Sum(p => p.points)}\""));
+            result.Add((group.Key, points.Sum(p => p.points), $"{string.Join(", ", points.Select(p => $"{p.test}: {p.points}"))}"));
         }
         if (verbose)
         {
             Console.WriteLine($"\nCombined test results");
-            foreach (var item in resultStrings)
+            foreach (var item in result)
             {
-                Console.WriteLine($"- {item}");
+                Console.WriteLine($"- {item.student}, {item.totalPoints}, {item.testsSummary}");
             }
         }
-        return resultStrings;
+        return result;
     }
 
     private List<(string student, string test, string result)> GetTestResults(DirectoryInfo path, string logfile, bool verbose)
@@ -306,11 +406,4 @@ public enum TestSteps
     All = Copy | Test | Results
 }
 
-public enum ResultFileType
-{
-    // general CSV file
-    CSV = 1,
-    // CSV file from Savonia's Moodle for an assignment
-    Moodle = 2
-}
 
