@@ -83,7 +83,7 @@ public class SubmissionsTestCommand : Command
 
         var moodleCsvInputOption = new Option<string>(
             name: "--moodle-csv",
-            description: "Moodle csv file. When specified to an existing file the results are combined to with this file.",
+            description: "Moodle csv file. When the file exists the test results are combined with this file.",
             getDefaultValue: () => "");
 
         Add(csvOutputOption);

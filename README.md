@@ -9,11 +9,12 @@ dotnet tool install --global Savonia.Assignment.Tool
 
 Contains commands
 
-- solution pack: to create a zip package of your solution.
-- answers unpack: to unpack (unzip) all answers. Typically each person's answer is in a zip file. 
-- hash create: to create hash from selected file(s) in answers. Used to find duplicates.
-- hash compare: to find duplicates among the created hashes.
-- hash open: to open duplicates in an editor (by default VS Code) for manual checking.
+- `solution pack`: to create a zip package of your solution.
+- `submissions unpack`: to unpack (unzip) all answers. Typically each person's answer is in a zip file.
+- `submissions test`: to run tests on the submissions. 
+- `hash create`: to create hash from selected file(s) in answers. Used to find duplicates.
+- `hash compare`: to find duplicates among the created hashes.
+- `hash open`: to open duplicates in an editor (by default VS Code) for manual checking.
 
 ## Usage
 
@@ -49,15 +50,29 @@ sourcefile.zip
 "**/tests"
 ```
 
-### To unpack answers
+### To unpack submissions
 
-- To unpack all answer zip files in a directory
+- To unpack all submission zip files in a directory
 
 ```dotnetcli
-savoniatool answers unpack
+savoniatool submissions unpack
 ```
 
 This will read all .zip files in current directory and unzip them. Each .zip is unzipped in a folder named the same as the .zip file without the .zip extension (e.g. *myanswer.zip* is unpacked to folder *myanswer*).
+
+### To test submissions
+
+- To test all submissions
+
+```dotnetcli
+savoniatool submissions test
+```
+
+This is used to copy test harness to submission directories, run the tests and report the results.
+
+`submissions test` command has multiple mandatory options, check the tool's help for the options.
+
+Uses `dotnet test` command to run the tests and assumes that there is a solution file (*.sln) in each submissions directory with the test projects included in the solution file.
 
 ### To create hash
 
