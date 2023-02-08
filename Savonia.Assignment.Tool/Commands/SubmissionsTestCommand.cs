@@ -65,7 +65,7 @@ public class SubmissionsTestCommand : Command
 
         var testPointsOption = new Option<List<int>>(
             name: "--test-points",
-            description: "Points awarded by successfull tests. Use in the same order as tests are defined",
+            description: "Points awarded by successfull tests. Use in the same order as tests are defined. One point per test is used as default if nothing is set here.",
             getDefaultValue: () => new List<int> { })
         {
             AllowMultipleArgumentsPerToken = true

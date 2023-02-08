@@ -82,7 +82,7 @@ Uses `dotnet test` command to run the tests and assumes that there is a solution
 savoniatool hash create -o hashes.csv --includes "**/*.cs"
 ```
 
-This will find all *.cs* files in current directory and create a hash from the files. Code comments (line and block), white spaces, new lines and carriage returns are removed by default before creating the hash. Hashes are saved in the output file defined with option `-o` (or `--output`).
+This will find all **.cs* files in all directories and creates a hash from the files. Code comments (line and block), white spaces, new lines and carriage returns are removed by default before creating the hash. Hashes are saved in the output file defined with option `-o` (or `--output`).
 
 `--filter-source-code` option uses flags arguments. Define multiple values with comma (,). E.g. `--filter-source-code whitespaces,newlines` to filter out white spaces and new lines. Set option `--filter-source-code none` to create hash from the file as is (without any filtering).
 
