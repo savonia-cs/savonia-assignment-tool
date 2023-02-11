@@ -330,18 +330,19 @@ public class SubmissionsTestCommand : Command
         bool testDataPrefixHasValue = false == string.IsNullOrEmpty(testDataPrefix);
         if (verbose)
         {
-            Console.WriteLine($"\nRunning tests");
+            Console.WriteLine($"\nRunning {answerDirectories.Length} tests");
             if (testDataPrefixHasValue)
             {
                 Console.WriteLine($"- Setting environment variable TEST_DATA_PREFIX={testDataPrefix}");
             }
         }
-        List<Task> testProcesses = new List<Task>();
+        int counter = 1;
+        int answerDirectoriesCount = answerDirectories.Length;
         foreach (var answerDir in answerDirectories)
         {
             if (verbose)
             {
-                Console.WriteLine($"- {answerDir.Name}");
+                Console.WriteLine($"{counter++, 4}{answerDir.Name}");
             }
             ProcessStartInfo psi = new ProcessStartInfo(@"dotnet", $"test --logger \"trx;logfilename={logfile}\"");
             psi.WorkingDirectory = answerDir.FullName;
@@ -352,9 +353,8 @@ public class SubmissionsTestCommand : Command
             psi.UseShellExecute = false;
             psi.CreateNoWindow = false;
             var p = Process.Start(psi);
-            testProcesses.Add(p.WaitForExitAsync());
+            await p.WaitForExitAsync();
         }
-        await Task.WhenAll(testProcesses.ToArray());
     }
 
     private void CopyTestHarness(DirectoryInfo testHarness, bool verbose, List<string> testHarnessFilesToCopy, DirectoryInfo[] answerDirectories)
