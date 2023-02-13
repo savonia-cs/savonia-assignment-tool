@@ -34,13 +34,20 @@ public class SubmissionsUnpackCommand : Command
             }
             foreach (var file in zipFiles)
             {
-                using (ZipArchive zipArchive = ZipFile.OpenRead(file.FullName))
+                try
                 {
-                    if (verbose)
+                    using (ZipArchive zipArchive = ZipFile.OpenRead(file.FullName))
                     {
-                        Console.WriteLine($"{counter++,4}: {file.Name}");
+                        if (verbose)
+                        {
+                            Console.WriteLine($"{counter++,4}: {file.Name}");
+                        }
+                        zipArchive.ExtractToDirectory(file.FullName.Replace(file.Extension, ""), true);
                     }
-                    zipArchive.ExtractToDirectory(file.FullName.Replace(file.Extension, ""), true);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"- FAILED to unpack file {file.Name}");
                 }
             }
         }
