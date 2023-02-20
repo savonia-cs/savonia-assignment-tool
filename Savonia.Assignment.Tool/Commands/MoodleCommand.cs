@@ -8,7 +8,7 @@ public class MoodleCommand : Command
 {
     public MoodleCommand() : base("moodle", "Work with Moodle files")
     {
-        this.IsHidden = true;
+        AddCommand(new MoodleParseCommand());
         AddCommand(new MoodleReadCommand());
     }
 }

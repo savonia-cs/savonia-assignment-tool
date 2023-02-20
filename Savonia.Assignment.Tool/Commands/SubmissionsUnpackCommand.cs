@@ -22,7 +22,7 @@ public class SubmissionsUnpackCommand : Command
         var zipFilesCount = zipFiles.Count();
         if (verbose)
         {
-            Console.WriteLine($"Unpacking answers from folder '{path.Name}'");
+            Console.WriteLine($"Unpacking submissions from folder '{path.Name}'");
             Console.WriteLine($"- contains {zipFilesCount} .zip files");
         }
         if (zipFilesCount > 0)
@@ -47,7 +47,10 @@ public class SubmissionsUnpackCommand : Command
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"- FAILED to unpack file {file.Name}");
+                    var cc = Console.ForegroundColor;
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"!{counter++,3}: FAILED to unpack file {file.Name}");
+                    Console.ForegroundColor = cc;
                 }
             }
         }

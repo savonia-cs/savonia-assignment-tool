@@ -13,35 +13,41 @@ public class MoodleReadCommand : Command
 {
     public MoodleReadCommand() : base("read", "Read Moodle CSV file.")
     {
-        var csvOutputOption = new Option<string>(
-            name: "--output",
-            description: "Output csv file. This will overwrite possible existing file.",
-            getDefaultValue: () => "moodleresult.csv");
-        csvOutputOption.AddAlias("-o");
+        this.IsHidden = true;
 
-        Add(csvOutputOption);
-        Add(CommonOptions.SourceCsvFileOption);
+        var inputCsvHasHeaderOption = new Option<bool>(
+            name: "--input-has-header",
+            description: "Set to true when the input CSV file has header row.",
+            getDefaultValue: () => true);
+
+        var inputCsvDelimeterOption = new Option<string>(
+            name: "--input-delimiter",
+            description: "Delimiter for the input CSV file.",
+            getDefaultValue: () => ",");
+
+        AddOption(inputCsvHasHeaderOption);
+        AddOption(inputCsvDelimeterOption);
+        AddOption(CommonOptions.SourceCsvFileOption);
 
         this.SetHandler(async (context) =>
             {
-                await Handle(context.ParseResult.GetValueForOption(csvOutputOption)!,
-                                 context.ParseResult.GetValueForOption(CommonOptions.SourceCsvFileOption)!,
-                                 context.ParseResult.GetValueForOption(GlobalOptions.VerboseOption));
+                await Handle(context.ParseResult.GetValueForOption(CommonOptions.SourceCsvFileOption)!,
+                                context.ParseResult.GetValueForOption(inputCsvDelimeterOption)!,
+                                context.ParseResult.GetValueForOption(inputCsvHasHeaderOption),
+                                context.ParseResult.GetValueForOption(GlobalOptions.VerboseOption));
             });
     }
 
-    async Task Handle(string output,
-                        FileInfo input,
-                        bool verbose)
+    async Task Handle(FileInfo input, string inputDelimiter, bool inputHasHeader, bool verbose)
     {
         Console.WriteLine($"Opening file {input.Name}");
         List<List<string>> csvContent = new List<List<string>>();
         using (var streamRdr = new StreamReader(input.OpenRead()))
         {
-            var csvReader = new CsvReader(streamRdr, ",");
+            var csvReader = new CsvReader(streamRdr, inputDelimiter);
             while (csvReader.Read())
             {
-                List<string> row = new List<string>(csvReader.FieldsCount);                
+                List<string> row = new List<string>(csvReader.FieldsCount);
                 for (int i = 0; i < csvReader.FieldsCount; i++)
                 {
                     string val = csvReader[i];
@@ -56,6 +62,4 @@ public class MoodleReadCommand : Command
             Console.WriteLine($"{counter++,4}: ({item.Count}) {string.Join(", ", item)}");
         }
     }
-
-
 }

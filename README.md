@@ -11,7 +11,8 @@ Contains commands
 
 - `solution pack`: to create a zip package of your solution.
 - `submissions unpack`: to unpack (unzip) all answers. Typically each person's answer is in a zip file.
-- `submissions test`: to run tests on the submissions. 
+- `submissions test`: to run tests on the submissions.
+- `submissions pack`: to pack (zip) all answers. Packs each persons's answer folder individually to zip file.
 - `hash create`: to create hash from selected file(s) in answers. Used to find duplicates.
 - `hash compare`: to find duplicates among the created hashes.
 - `hash open`: to open duplicates in an editor (by default VS Code) for manual checking.
@@ -73,6 +74,25 @@ This is used to copy test harness to submission directories, run the tests and r
 `submissions test` command has multiple mandatory options, check the tool's help for the options.
 
 Uses `dotnet test` command to run the tests and assumes that there is a solution file (*.sln) in each submissions directory with the test projects included in the solution file.
+
+### To pack submissions
+
+- To pack all submission folders in a directory
+
+```dotnetcli
+savoniatool submissions pack
+```
+
+This will create a zip file for each subdirectory. The subdirectory itself is not included in the zip file, only files and folders inside the subdirectory. The default values for `--includes` and `--excludes` are good for common usage scenario where all subdirectories in directory defined in option `--path` (default is current directory) are to be packed to individual zip files.
+
+The individual zip files can be packed to a single zip file with command
+
+```dotnetcli
+savoniatool submissions pack -o submissions.zip
+```
+
+Defining value for option `--output` or `-o` will change the packing behavior to pack resulting files to a single zip file. The default values for `--includes` and `--excludes` are good for common usage scenario where all zip files in directory defined in option `--path` (default is current directory) are to be packed to a single zip file.
+
 
 ### To create hash
 
