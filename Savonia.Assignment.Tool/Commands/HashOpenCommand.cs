@@ -41,7 +41,7 @@ public class HashOpenCommand : Command
             CommonOptions.SourceCsvFileOption, HashCommand.HashIndexOption, fileIndexOption, editorOption, editorParamsOption, GlobalOptions.VerboseOption);        
     }
 
-    internal async Task Handle(FileInfo file, int? hashIndex, int? fileIndex, string editor, string editorParams, bool verbose)
+    async Task Handle(FileInfo file, int? hashIndex, int? fileIndex, string editor, string editorParams, bool verbose)
     {
         if (false == file.Exists)
         {

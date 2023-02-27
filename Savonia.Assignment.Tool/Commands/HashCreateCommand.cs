@@ -61,16 +61,16 @@ public class HashCreateCommand : Command
             });            
     }
 
-    internal async Task Handle(DirectoryInfo path,
-                                            string output,
-                                            List<string> includes,
-                                            List<string> excludes,
-                                            List<string> commentRegex,
-                                            string startingBlockComment,
-                                            string startingLineComment,
-                                            // bool filterFiles,
-                                            SourceCodeFilters filterFiles,
-                                            bool verbose)
+    async Task Handle(DirectoryInfo path,
+                        string output,
+                        List<string> includes,
+                        List<string> excludes,
+                        List<string> commentRegex,
+                        string startingBlockComment,
+                        string startingLineComment,
+                        // bool filterFiles,
+                        SourceCodeFilters filterFiles,
+                        bool verbose)
     {
         // if 'output' is written to 'path' then set it to excludes list
         string outputExclude = output.Replace(path.FullName, string.Empty);
