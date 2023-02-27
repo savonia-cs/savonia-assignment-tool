@@ -16,6 +16,7 @@ Contains commands
 - `hash create`: to create hash from selected file(s) in answers. Used to find duplicates.
 - `hash compare`: to find duplicates among the created hashes.
 - `hash open`: to open duplicates in an editor (by default VS Code) for manual checking.
+- `csv parse`: to parse a CSV file.
 
 ## Usage
 
@@ -127,3 +128,24 @@ savoniatool hash open --source duplicates.csv
 This will read hash groups (files that create the same hash value) from source file and open the files with an editor. Uses VS Code as default option to open the files and assumes that the editor is in PATH to allow opening from terminal. Reads filename from the first column and hash value from the last column. Define zero-based index values for options `--file-index` and `--hash-index` if first and last column assumptions are not valid for source file.
 
 > NOTE! This will try to open as many instances of the editor as there are hash groups in the source file. Each instance will open all code files within the hash group. **This may result in excess amounts of editor instances**.
+
+### To parse a CSV file
+
+- To parse required fields from a CSV. The file could be for example downloaded from Moodle LMS's Task activity.
+
+```dotnetcli
+savoniatool csv parse --source moodle-csv-file.csv --fields 1 2 3 -o parsed.csv --field-filters 1 \d+
+```
+
+This reads fields (or columns) 1, 2 and 3 from source CSV file. Uses regex filter (\d+) to get only numbers from the field 1 and outputs the result to parsed.csv file. The `--field-filters` option is used to define how the selected fields are parsed with regex pattern(s). The regex pattern can be defined in the --field-filters option directly or to a JSON file that is read with option `--regexes`. The JSON file must contain the regexes as a key-value pair (or dictionary with string keys and string values) like:
+
+```json
+{
+    "num": "\\d+",
+    "word": "^([\\w\\-]+)"
+}
+```
+
+`--field-filters` option references the regex from JSON file with the key value like `--field-filters 3 word` to select the first word from field 3.
+
+The fields in the CSV file can be referenced by number or by name when the CSV file contains a header row. The numbers start from one (1) (i.e. the first field's number is one). Options `--fields` and `--field-filters` both uses the field references.

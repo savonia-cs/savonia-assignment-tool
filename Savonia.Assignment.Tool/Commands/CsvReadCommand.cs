@@ -9,9 +9,9 @@ using NReco.Csv;
 
 namespace Savonia.Assignment.Tool.Commands;
 
-public class MoodleReadCommand : Command
+public class CsvReadCommand : Command
 {
-    public MoodleReadCommand() : base("read", "Read Moodle CSV file.")
+    public CsvReadCommand() : base("read", "Read a CSV file.")
     {
         this.IsHidden = true;
 

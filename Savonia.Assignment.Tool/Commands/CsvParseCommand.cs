@@ -10,14 +10,14 @@ using System.Text.RegularExpressions;
 
 namespace Savonia.Assignment.Tool.Commands;
 
-public class MoodleParseCommand : Command
+public class CsvParseCommand : Command
 {
-    private static readonly Dictionary<string, string> PredefinedRegexes = new Dictionary<string, string>
+    private static readonly Dictionary<string, string> PredefinedRegexes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         { "URL", @"(https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])"}
     };
 
-    public MoodleParseCommand() : base("parse", "Parse Moodle CSV file with selected fields and possible Regex filters to output CSV file.")
+    public CsvParseCommand() : base("parse", "Parse a CSV file with selected fields and possible Regex filters to output CSV file.")
     {
         var inputCsvHasHeaderOption = new Option<bool>(
             name: "--input-has-header",
@@ -40,6 +40,29 @@ public class MoodleParseCommand : Command
             getDefaultValue: () => "moodleresult.csv");
         csvOutputOption.AddAlias("-o");
 
+        var regexInputOption = new Option<FileInfo?>(
+            name: "--regexes",
+            description: "A JSON file containing key-value pair (a dictionary) of regexes to filter/parse CSV column values. Key is the regex \"name\" and value is the regex \"pattern\".",
+            isDefault: true,
+            parseArgument: result =>
+            {
+                if (result.Tokens.Count == 0)
+                {
+                    // no regexes defined
+                    return null;
+                }
+                string? filePath = result.Tokens.Single().Value;
+                if (!File.Exists(filePath))
+                {
+                    result.ErrorMessage = "Regexes JSON file does not exist";
+                    return null;
+                }
+                else
+                {
+                    return new FileInfo(filePath);
+                }
+            });
+
         var selectedFieldsOption = new Option<List<string>>(
             name: "--fields",
             description: "Fields to select from the input CSV file to be written to output CSV file. Use one-based (i.e. first field is one (1)) field number or field header to select. Leave to empty to select all fields.",
@@ -50,7 +73,7 @@ public class MoodleParseCommand : Command
 
         var fieldFiltersOption = new Option<List<string>>(
             name: "--field-filters",
-            description: "Field regex filter. Set in pairs where first value is field number or name and the second is the regex (e.g. --field-filters 3 \\d+ to select first numbers from field 3). Use predefined regex filter values: URL to filter urls. Leave to empty to select field data as is.",
+            description: "Field regex filter. Set in pairs where first value is field number or name and the second is the regex (e.g. --field-filters 3 \\d+ to select first numbers from field 3). Use predefined regex filter values: URL to filter urls or regex name(s) defined in --regexes option. Leave to empty to select field data as is.",
             getDefaultValue: () => new List<string>())
         {
             AllowMultipleArgumentsPerToken = true
@@ -62,6 +85,7 @@ public class MoodleParseCommand : Command
         AddOption(csvOutputOption);
         AddOption(selectedFieldsOption);
         AddOption(fieldFiltersOption);
+        AddOption(regexInputOption);
         AddOption(CommonOptions.SourceCsvFileOption);
 
         this.SetHandler(async (context) =>
@@ -73,6 +97,7 @@ public class MoodleParseCommand : Command
                                  context.ParseResult.GetValueForOption(inputCsvHasHeaderOption),
                                  context.ParseResult.GetValueForOption(selectedFieldsOption),
                                  context.ParseResult.GetValueForOption(fieldFiltersOption),
+                                 context.ParseResult.GetValueForOption(regexInputOption),
                                  context.ParseResult.GetValueForOption(GlobalOptions.VerboseOption));
             });
     }
@@ -84,6 +109,7 @@ public class MoodleParseCommand : Command
                         bool inputHasHeader,
                         List<string> selectedFields,
                         List<string> fieldFilters,
+                        FileInfo? regexInput,
                         bool verbose)
     {
         // set working directory
@@ -130,6 +156,7 @@ public class MoodleParseCommand : Command
             }
         }
         var fieldIndexes = GetSelectedFieldIndexes(headerRow, selectedFields, csvContent);
+        await LoadRegexes(regexInput);
         var fieldRegexes = GetFieldRegexes(fieldFilters, headerRow);
 
         if (File.Exists(output))
@@ -150,6 +177,22 @@ public class MoodleParseCommand : Command
                     csvWriter.WriteField(GetFieldValue(row[colIndex], colIndex, fieldRegexes));
                 }
                 csvWriter.NextRecord();
+            }
+        }
+    }
+
+    private async Task LoadRegexes(FileInfo? regexInput)
+    {
+        // load possible regexes from JSON file
+        if (null != regexInput)
+        {
+            Dictionary<string, string>? regexes = await System.Text.Json.JsonSerializer.DeserializeAsync<Dictionary<string, string>>(regexInput.OpenRead());
+            if (null != regexes && regexes.Count > 0)
+            {
+                foreach (var key in regexes.Keys)
+                {
+                    PredefinedRegexes[key] = regexes[key];
+                }
             }
         }
     }
@@ -183,9 +226,9 @@ public class MoodleParseCommand : Command
                     int fieldIndex = GetFieldIndex(headerRow, fieldName);
                     if (fieldIndex > -1)
                     {
-                        if (PredefinedRegexes.ContainsKey(regex.ToUpper()))
+                        if (PredefinedRegexes.ContainsKey(regex))
                         {
-                            regex = PredefinedRegexes[regex.ToUpper()];
+                            regex = PredefinedRegexes[regex];
                         }
                         fieldRegexes.Add(fieldIndex, regex);
                     }

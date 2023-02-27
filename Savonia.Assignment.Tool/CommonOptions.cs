@@ -56,19 +56,19 @@ public static class CommonOptions
 
         SourceCsvFileOption = new Option<FileInfo>(
             name: "--source",
-            description: "Source csv file.",
+            description: "Source CSV file.",
             isDefault: true,
             parseArgument: result =>
             {
                 if (result.Tokens.Count == 0)
                 {
-                    result.ErrorMessage = "Source csv file is not specified. Use --source option.";
+                    result.ErrorMessage = "Source CSV file is not specified. Use --source option.";
                     return null;
                 }
                 string? filePath = result.Tokens.Single().Value;
                 if (!File.Exists(filePath))
                 {
-                    result.ErrorMessage = "File does not exist";
+                    result.ErrorMessage = "Source CSV file does not exist";
                     return null;
                 }
                 else

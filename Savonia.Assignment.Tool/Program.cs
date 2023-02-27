@@ -23,7 +23,7 @@ class Program
         rootCommand.AddCommand(new SolutionCommand());
         rootCommand.AddCommand(new SubmissionsCommand());
         rootCommand.AddCommand(new HashCommand());
-        rootCommand.AddCommand(new MoodleCommand());
+        rootCommand.AddCommand(new CsvCommand());
 
         return await rootCommand.InvokeAsync(args);
     }
