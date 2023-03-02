@@ -11,6 +11,7 @@ public class SubmissionsCommand : Command
         AddCommand(new SubmissionsUnpackCommand());
         AddCommand(new SubmissionsTestCommand());
         AddCommand(new SubmissionsPackCommand());
+        AddCommand(new SubmissionsListCommand());
     }
 }
 

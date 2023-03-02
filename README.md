@@ -11,6 +11,7 @@ Contains commands
 
 - `solution pack`: to create a zip package of your solution.
 - `submissions unpack`: to unpack (unzip) all answers. Typically each person's answer is in a zip file.
+- `submissions list`: to list all answer folders. The list has numbers to the folders and the numbers can be used to select individual or a range of folders to test.
 - `submissions test`: to run tests on the submissions.
 - `submissions pack`: to pack (zip) all answers. Packs each persons's answer folder individually to zip file.
 - `hash create`: to create hash from selected file(s) in answers. Used to find duplicates.

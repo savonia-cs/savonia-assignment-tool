@@ -35,7 +35,7 @@ public class SubmissionsTestCommand : Command
             getDefaultValue: () => "result.csv");
         csvOutputOption.AddAlias("-o");
 
-        var testHarnessOption = new Option<DirectoryInfo>(
+        var testHarnessOption = new Option<DirectoryInfo?>(
             name: "--test-harness",
             description: "Path to directory from where to copy the test harnes to each answer folder.",
             isDefault: true,
@@ -43,13 +43,12 @@ public class SubmissionsTestCommand : Command
             {
                 if (result.Tokens.Count == 0)
                 {
-                    result.ErrorMessage = "Test harness path is not specified. Use --test-harness option.";
                     return null;
                 }
                 string? path = result.Tokens.Single().Value;
                 if (!Directory.Exists(path))
                 {
-                    result.ErrorMessage = "Directory does not exist";
+                    result.ErrorMessage = "Directory for test harness does not exist";
                     return null;
                 }
                 else
@@ -86,6 +85,20 @@ public class SubmissionsTestCommand : Command
             description: "Moodle csv file. When the file exists the test results are combined with this file.",
             getDefaultValue: () => "");
 
+        var selectedSubmissionsOption = new Option<List<string>?>(
+            name: "--selected-submissions",
+            description: "Set index number of submission folders to run tests on. Use submissions list command to see the numbers. Use single number (i.e. 3 4 8) to select individual folders. Use dash (-) to select a range of folders (i.e. 1-10 14-16) or use dash with one number to select from start or to end (i.e. -10 15-). Leave empty to select all folders.",
+            getDefaultValue: () => new List<string> { })
+            {
+                AllowMultipleArgumentsPerToken = true
+            };
+
+        var testRunnerWaitOption = new Option<int>(
+            name: "--test-runner-wait",
+            description: "Wait time in milliseconds for test runner to finish. Default is 5000 (5 seconds).",
+            getDefaultValue: () => 5000);
+
+
         Add(csvOutputOption);
         Add(testHarnessOption);
         Add(testDataPrefixOption);
@@ -95,6 +108,8 @@ public class SubmissionsTestCommand : Command
         Add(testStepsOption);
         Add(testLogfileOption);
         Add(moodleCsvInputOption);
+        Add(selectedSubmissionsOption);
+        Add(testRunnerWaitOption);
 
         this.SetHandler(async (context) =>
             {
@@ -106,24 +121,31 @@ public class SubmissionsTestCommand : Command
                                  context.ParseResult.GetValueForOption(CommonOptions.IncludesOption)!,
                                  context.ParseResult.GetValueForOption(CommonOptions.ExcludesOption)!,
                                  context.ParseResult.GetValueForOption(testStepsOption),
-                                 context.ParseResult.GetValueForOption(testLogfileOption),
+                                 context.ParseResult.GetValueForOption(testLogfileOption)!,
                                  context.ParseResult.GetValueForOption(moodleCsvInputOption),
+                                 context.ParseResult.GetValueForOption(selectedSubmissionsOption),
+                                 context.ParseResult.GetValueForOption(testRunnerWaitOption),
                                  context.ParseResult.GetValueForOption(GlobalOptions.VerboseOption));
             });
     }
 
     async Task Handle(DirectoryInfo path,
                         string output,
-                        DirectoryInfo testHarness,
-                        string testDataPrefix,
-                        List<int> testPoints,
+                        DirectoryInfo? testHarness,
+                        string? testDataPrefix,
+                        List<int>? testPoints,
                         List<string> includes,
                         List<string> excludes,
                         TestSteps steps,
                         string logfile,
-                        string moodleCsvInput,
+                        string? moodleCsvInput,
+                        List<string>? selectedSubmissions,
+                        int testRunnerWait,
                         bool verbose)
     {
+        Directory.SetCurrentDirectory(path.FullName);
+        DirectoryInfo[] answerDirectories = SelectSubmissionFolders(path, selectedSubmissions, verbose);
+
         if (steps == TestSteps.None)
         {
             // no action is specified
@@ -131,22 +153,26 @@ public class SubmissionsTestCommand : Command
             return;
         }
 
-        Directory.SetCurrentDirectory(path.FullName);
-        var answerDirectories = path.GetDirectories();
-
         if (steps.HasFlag(TestSteps.Copy))
         {
-            Matcher matcher = new Matcher();
-            matcher.AddIncludePatterns(includes);
-            matcher.AddExcludePatterns(excludes);
-            var testHarnessFilesToCopy = matcher.GetResultsInFullPath(testHarness.FullName).ToList();
-            CopyTestHarness(testHarness, verbose, testHarnessFilesToCopy, answerDirectories);
+            if (null == testHarness)
+            {
+                Console.WriteLine($"No test harness is specified in --test-harness option. The test harness is required in copy step to copy tests and project files to each answer folder.");
+            }
+            else
+            {
+                Matcher matcher = new Matcher();
+                matcher.AddIncludePatterns(includes);
+                matcher.AddExcludePatterns(excludes);
+                var testHarnessFilesToCopy = matcher.GetResultsInFullPath(testHarness.FullName).ToList();
+                CopyTestHarness(testHarness, verbose, testHarnessFilesToCopy, answerDirectories);
+            }
         }
 
         if (steps.HasFlag(TestSteps.Test))
         {
             // run tests
-            await RunTests(testDataPrefix, verbose, answerDirectories, logfile);
+            await RunTests(testDataPrefix, verbose, answerDirectories, testRunnerWait, logfile);
         }
         if (steps.HasFlag(TestSteps.Results))
         {
@@ -155,6 +181,65 @@ public class SubmissionsTestCommand : Command
             var resultsWithPoints = AddTestPointsToResults(testPoints, verbose, results);
             await WriteResultFile(output, resultsWithPoints, moodleCsvInput, verbose);
         }
+    }
+
+    private static DirectoryInfo[] SelectSubmissionFolders(DirectoryInfo path, List<string>? selectedSubmissions, bool verbose)
+    {
+        // select submission folders to run the tests on
+        var answerDirectories = path.GetDirectories().OrderBy(d => d.Name).ToArray();
+        if (null != selectedSubmissions && selectedSubmissions.Count > 0)
+        {
+            // filter submission folders by index number or ranges
+            List<int> selectedSubmissionsIndexes = new List<int>();
+            // check ranges and create zero (0) based indexes
+            foreach (var selectedSubmission in selectedSubmissions.Where(s => s.Contains("-", StringComparison.OrdinalIgnoreCase)))
+            {
+                var range = selectedSubmission.Split('-', StringSplitOptions.RemoveEmptyEntries);
+                if (range.Length == 2 && int.TryParse(range[0], out int start) && int.TryParse(range[1], out int end))
+                {
+                    if (end >= start)
+                    {
+                        selectedSubmissionsIndexes.AddRange(Enumerable.Range(start - 1, end - start + 1));
+                    }
+                }
+                else if (range.Length == 1 && int.TryParse(range[0], out int index))
+                {
+                    if (selectedSubmission.EndsWith("-", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // X- -> from X to end
+                        selectedSubmissionsIndexes.AddRange(Enumerable.Range(index - 1, answerDirectories.Length - index + 1));
+                    }
+                    else
+                    {
+                        // -X -> from start to X
+                        selectedSubmissionsIndexes.AddRange(Enumerable.Range(0, index));
+                    }
+                }
+            }
+            // check individual numbers and create zero (0) based indexes
+            foreach (var selectedSubmission in selectedSubmissions.Where(s => false == s.Contains("-", StringComparison.OrdinalIgnoreCase)))
+            {
+                if (int.TryParse(selectedSubmission, out int index))
+                {
+                    selectedSubmissionsIndexes.Add(index - 1);
+                }
+            }
+            selectedSubmissionsIndexes = selectedSubmissionsIndexes.Distinct().Where(i => i >= 0 && i < answerDirectories.Length).OrderBy(i => i).ToList();
+            if (verbose)
+            {
+                Console.WriteLine($"Selecting submission folders {string.Join(", ", selectedSubmissionsIndexes.Select(i => i + 1))}.");
+            }
+            answerDirectories = answerDirectories.Where((d, i) => selectedSubmissionsIndexes.Contains(i)).ToArray();
+        }
+        else
+        {
+            if (verbose)
+            {
+                Console.WriteLine($"Selecting all {answerDirectories.Length} submission folders.");
+            }
+        }
+
+        return answerDirectories;
     }
 
     private async Task WriteResultFile(string output, List<(string student, int totalPoints, string testsSummary)> resultsWithPoints, string moodleCsvInput, bool verbose)
@@ -324,7 +409,7 @@ public class SubmissionsTestCommand : Command
         return results;
     }
 
-    private async Task RunTests(string testDataPrefix, bool verbose, DirectoryInfo[] answerDirectories, string logfile)
+    private async Task RunTests(string? testDataPrefix, bool verbose, DirectoryInfo[] answerDirectories, int testRunnerWait, string logfile)
     {
         // run tests on each answer directory
         bool testDataPrefixHasValue = false == string.IsNullOrEmpty(testDataPrefix);
@@ -333,7 +418,7 @@ public class SubmissionsTestCommand : Command
             Console.WriteLine($"\nRunning {answerDirectories.Length} tests");
             if (testDataPrefixHasValue)
             {
-                Console.WriteLine($"- Setting environment variable TEST_DATA_PREFIX={testDataPrefix}");
+                Console.WriteLine($"- Setting environment variable TEST_DATA_PREFIX={testDataPrefix!}");
             }
         }
         int counter = 1;
@@ -348,12 +433,15 @@ public class SubmissionsTestCommand : Command
             psi.WorkingDirectory = answerDir.FullName;
             if (testDataPrefixHasValue)
             {
-                psi.EnvironmentVariables.Add("TEST_DATA_PREFIX", testDataPrefix);
+                psi.EnvironmentVariables.Add("TEST_DATA_PREFIX", testDataPrefix!);
             }
             psi.UseShellExecute = false;
             psi.CreateNoWindow = false;
             var p = Process.Start(psi);
-            await p.WaitForExitAsync();
+            if (null != p)
+            {
+                p.WaitForExit(testRunnerWait);
+            }
         }
     }
 
