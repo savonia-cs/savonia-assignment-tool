@@ -89,9 +89,9 @@ public class SubmissionsTestCommand : Command
             name: "--selected-submissions",
             description: "Set index number of submission folders to run tests on. Use submissions list command to see the numbers. Use single number (i.e. 3 4 8) to select individual folders. Use dash (-) to select a range of folders (i.e. 1-10 14-16) or use dash with one number to select from start or to end (i.e. -10 15-). Leave empty to select all folders.",
             getDefaultValue: () => new List<string> { })
-            {
-                AllowMultipleArgumentsPerToken = true
-            };
+        {
+            AllowMultipleArgumentsPerToken = true
+        };
 
         var testRunnerWaitOption = new Option<int>(
             name: "--test-runner-wait",
@@ -292,7 +292,7 @@ public class SubmissionsTestCommand : Command
             int moodleFieldIndexForName = 1;
             int moodleFieldIndexForGrade = 4;
             int moodleFieldIndexForFeedbackComments = moodleCsvFieldsCount - 1; // the last field
-            
+
             char studentTokenizer = '_';
             int studentIdTokenIndex = 1;
 
@@ -329,11 +329,11 @@ public class SubmissionsTestCommand : Command
                 {
                     foreach (var col in row)
                     {
-                        csvWriter.WriteField(col);    
+                        csvWriter.WriteField(col);
                     }
                     csvWriter.NextRecord();
                 }
-            }            
+            }
         }
     }
 
@@ -404,7 +404,7 @@ public class SubmissionsTestCommand : Command
             {
                 Console.WriteLine($"- {student} / {test} = {resultValue?.Value}");
             }
-            results.Add((student, test, resultValue?.Value));
+            results.Add((student, test, resultValue?.Value ?? ""));
         }
         return results;
     }
@@ -415,7 +415,7 @@ public class SubmissionsTestCommand : Command
         bool testDataPrefixHasValue = false == string.IsNullOrEmpty(testDataPrefix);
         if (verbose)
         {
-            Console.WriteLine($"\nRunning {answerDirectories.Length} tests");
+            Console.WriteLine($"\nRunning {answerDirectories.Length} tests with {testRunnerWait} ms wait time for each test.");
             if (testDataPrefixHasValue)
             {
                 Console.WriteLine($"- Setting environment variable TEST_DATA_PREFIX={testDataPrefix!}");
@@ -427,20 +427,27 @@ public class SubmissionsTestCommand : Command
         {
             if (verbose)
             {
-                Console.WriteLine($"{counter++, 4}{answerDir.Name}");
+                Console.WriteLine($"{counter++,4} {answerDir.Name}");
             }
-            ProcessStartInfo psi = new ProcessStartInfo(@"dotnet", $"test --logger \"trx;logfilename={logfile}\"");
-            psi.WorkingDirectory = answerDir.FullName;
-            if (testDataPrefixHasValue)
+            try
             {
-                psi.EnvironmentVariables.Add("TEST_DATA_PREFIX", testDataPrefix!);
+                ProcessStartInfo psi = new ProcessStartInfo(@"dotnet", $"test --blame-hang-timeout {testRunnerWait} --logger \"trx;logfilename={logfile}\"");
+                psi.WorkingDirectory = answerDir.FullName;
+                if (testDataPrefixHasValue)
+                {
+                    psi.EnvironmentVariables.Add("TEST_DATA_PREFIX", testDataPrefix!);
+                }
+                psi.UseShellExecute = false;
+                psi.CreateNoWindow = false;
+                var p = Process.Start(psi);
+                if (null != p)
+                {
+                    await p.WaitForExitAsync();
+                }
             }
-            psi.UseShellExecute = false;
-            psi.CreateNoWindow = false;
-            var p = Process.Start(psi);
-            if (null != p)
+            catch (Exception e)
             {
-                p.WaitForExit(testRunnerWait);
+                Console.WriteLine($"*****\nError executing the test runner on {answerDir.Name}:\n{e.Message}\n*****");
             }
         }
     }
