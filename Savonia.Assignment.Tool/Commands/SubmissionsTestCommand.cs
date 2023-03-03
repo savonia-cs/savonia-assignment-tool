@@ -95,8 +95,8 @@ public class SubmissionsTestCommand : Command
 
         var testRunnerWaitOption = new Option<int>(
             name: "--test-runner-wait",
-            description: "Wait time in milliseconds for test runner to finish. Default is 5000 (5 seconds).",
-            getDefaultValue: () => 5000);
+            description: "Wait time in milliseconds for test runner to finish. Default is 15000 (15 seconds).",
+            getDefaultValue: () => 15000);
 
 
         Add(csvOutputOption);
@@ -183,7 +183,7 @@ public class SubmissionsTestCommand : Command
         }
     }
 
-    private static DirectoryInfo[] SelectSubmissionFolders(DirectoryInfo path, List<string>? selectedSubmissions, bool verbose)
+    private DirectoryInfo[] SelectSubmissionFolders(DirectoryInfo path, List<string>? selectedSubmissions, bool verbose)
     {
         // select submission folders to run the tests on
         var answerDirectories = path.GetDirectories().OrderBy(d => d.Name).ToArray();
