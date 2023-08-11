@@ -7,13 +7,15 @@ namespace Savonia.Assignment.Tool.Commands;
 
 public class SubmissionsListCommand : Command
 {
-    public SubmissionsListCommand() : base("list", "List submission folders in defined 'path'. The list numbers can be used to select submissions to include in testing.")
+    public SubmissionsListCommand() : base("list", "List submission folders in defined source folder. The list numbers can be used to select submissions to include in testing.")
     {
+        Add(CommonArguments.SourcePathArgument);
+
         this.SetHandler(async (path, verbose) =>
             {
                 await Handle(path!, verbose);
             },
-            GlobalOptions.SourcePathOption, GlobalOptions.VerboseOption);
+            CommonArguments.SourcePathArgument, GlobalOptions.VerboseOption);
     }
 
     async Task Handle(DirectoryInfo path, bool verbose)

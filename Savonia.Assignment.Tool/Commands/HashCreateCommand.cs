@@ -9,12 +9,12 @@ namespace Savonia.Assignment.Tool.Commands;
 
 public class HashCreateCommand : Command
 {
-    public HashCreateCommand() : base("create", "Create comparable hashes of code files in defined 'path'.")
+    public HashCreateCommand() : base("create", "Create comparable hashes of code files in defined folder.")
     {
-        var csvOutputOption = new Option<string>(
+        var csvOutputOption = new Option<string?>(
             name: "--output",
-            description: "Output csv file. This will overwrite possible existing file.",
-            getDefaultValue: () => "result.csv");
+            description: "Output csv file. This will overwrite possible existing file. By default the csv file is named the same as the source folder name with \"-hashes.csv\" appended to the end.",
+            getDefaultValue: () => null);
         csvOutputOption.AddAlias("-o");
 
         // regex filters for code comments in C#, see https://stackoverflow.com/a/3524689
@@ -39,6 +39,7 @@ public class HashCreateCommand : Command
             description: "Filter files before hashing.",
             getDefaultValue: () => SourceCodeFilters.All);
 
+        Add(CommonArguments.SourcePathArgument);
         Add(csvOutputOption);
         Add(CommonOptions.IncludesOption);
         Add(CommonOptions.ExcludesOption);
@@ -49,15 +50,17 @@ public class HashCreateCommand : Command
 
         this.SetHandler(async (context) =>
             {
-                await Handle(context.ParseResult.GetValueForOption(GlobalOptions.SourcePathOption)!,
-                                 context.ParseResult.GetValueForOption(csvOutputOption)!,
-                                 context.ParseResult.GetValueForOption(CommonOptions.IncludesOption)!,
-                                 context.ParseResult.GetValueForOption(CommonOptions.ExcludesOption)!,
-                                 context.ParseResult.GetValueForOption(commentRegexFiltersOption)!,
-                                 context.ParseResult.GetValueForOption(startingBlockCommentOption)!,
-                                 context.ParseResult.GetValueForOption(startingLineCommentOption)!,
-                                 context.ParseResult.GetValueForOption(filterSourceCodeOption),
-                                 context.ParseResult.GetValueForOption(GlobalOptions.VerboseOption));
+                var folder = context.ParseResult.GetValueForArgument(CommonArguments.SourcePathArgument)!;
+                var output = context.ParseResult.GetValueForOption(csvOutputOption) ?? $"{folder.Name}-hashes.csv";
+                await Handle(folder,
+                                output,
+                                context.ParseResult.GetValueForOption(CommonOptions.IncludesOption)!,
+                                context.ParseResult.GetValueForOption(CommonOptions.ExcludesOption)!,
+                                context.ParseResult.GetValueForOption(commentRegexFiltersOption)!,
+                                context.ParseResult.GetValueForOption(startingBlockCommentOption)!,
+                                context.ParseResult.GetValueForOption(startingLineCommentOption)!,
+                                context.ParseResult.GetValueForOption(filterSourceCodeOption),
+                                context.ParseResult.GetValueForOption(GlobalOptions.VerboseOption));
             });            
     }
 
@@ -115,7 +118,7 @@ public class HashCreateCommand : Command
         StringBuilder resultBuilder = new StringBuilder();
         foreach (string file in matcher.GetResultsInFullPath(path.FullName))
         {
-            string relativeFile = file.Replace(path.FullName, "");
+            string relativeFile = Path.GetRelativePath(path.FullName, file);
 
             if (verbose)
             {

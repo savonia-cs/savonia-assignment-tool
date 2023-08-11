@@ -17,27 +17,27 @@ public class CsvParseCommand : Command
         { "URL", @"(https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])"}
     };
 
-    public CsvParseCommand() : base("parse", "Parse a CSV file with selected fields and possible Regex filters to output CSV file.")
+    public CsvParseCommand() : base("parse", "Parse a CSV file with selected fields and possible Regex filters and output to another CSV file.")
     {
         var inputCsvHasHeaderOption = new Option<bool>(
             name: "--input-has-header",
             description: "Set to true when the input CSV file has header row.",
             getDefaultValue: () => true);
 
-        var inputCsvDelimeterOption = new Option<string>(
+        var inputCsvDelimiterOption = new Option<string>(
             name: "--input-delimiter",
             description: "Delimiter for the input CSV file.",
             getDefaultValue: () => ",");
 
-        var outputCsvDelimeterOption = new Option<string>(
+        var outputCsvDelimiterOption = new Option<string>(
             name: "--output-delimiter",
             description: "Delimiter for the output CSV file.",
             getDefaultValue: () => ",");
 
-        var csvOutputOption = new Option<string>(
+        var csvOutputOption = new Option<string?>(
             name: "--output",
-            description: "Output csv file. This will overwrite possible existing file.",
-            getDefaultValue: () => "moodleresult.csv");
+            description: "Output csv file. This will overwrite possible existing file. By default the output file is named the same as source file with \"-result.csv\" appended to the end.",
+            getDefaultValue: () => null);
         csvOutputOption.AddAlias("-o");
 
         var regexInputOption = new Option<FileInfo?>(
@@ -79,21 +79,24 @@ public class CsvParseCommand : Command
             AllowMultipleArgumentsPerToken = true
         };
 
-        AddOption(inputCsvDelimeterOption);
-        AddOption(outputCsvDelimeterOption);
+        Add(CommonArguments.SourceCsvFileArgument);
+        AddOption(inputCsvDelimiterOption);
+        AddOption(outputCsvDelimiterOption);
         AddOption(inputCsvHasHeaderOption);
         AddOption(csvOutputOption);
         AddOption(selectedFieldsOption);
         AddOption(fieldFiltersOption);
         AddOption(regexInputOption);
-        AddOption(CommonOptions.SourceCsvFileOption);
 
         this.SetHandler(async (context) =>
             {
-                await Handle(context.ParseResult.GetValueForOption(csvOutputOption)!,
-                                 context.ParseResult.GetValueForOption(CommonOptions.SourceCsvFileOption)!,
-                                 context.ParseResult.GetValueForOption(inputCsvDelimeterOption),
-                                 context.ParseResult.GetValueForOption(outputCsvDelimeterOption),
+                FileInfo input = context.ParseResult.GetValueForArgument(CommonArguments.SourceCsvFileArgument)!;
+                string output = context.ParseResult.GetValueForOption(csvOutputOption) ?? $"{Path.GetFileNameWithoutExtension(input.Name)}-result.csv";
+
+                await Handle(output,
+                                 input,
+                                 context.ParseResult.GetValueForOption(inputCsvDelimiterOption),
+                                 context.ParseResult.GetValueForOption(outputCsvDelimiterOption),
                                  context.ParseResult.GetValueForOption(inputCsvHasHeaderOption),
                                  context.ParseResult.GetValueForOption(selectedFieldsOption),
                                  context.ParseResult.GetValueForOption(fieldFiltersOption),

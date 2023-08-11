@@ -37,7 +37,7 @@ public class SubmissionsTestCommand : Command
 
         var testHarnessOption = new Option<DirectoryInfo?>(
             name: "--test-harness",
-            description: "Path to directory from where to copy the test harnes to each answer folder.",
+            description: "Path to directory from where to copy the test harness to each answer folder.",
             isDefault: true,
             parseArgument: result =>
             {
@@ -64,7 +64,7 @@ public class SubmissionsTestCommand : Command
 
         var testPointsOption = new Option<List<int>>(
             name: "--test-points",
-            description: "Points awarded by successfull tests. Use in the same order as tests are defined. One point per test is used as default if nothing is set here.",
+            description: "Points awarded by successful tests. Use in the same order as tests are defined. One point per test is used as default if nothing is set here.",
             getDefaultValue: () => new List<int> { })
         {
             AllowMultipleArgumentsPerToken = true
@@ -75,7 +75,7 @@ public class SubmissionsTestCommand : Command
             description: "Test steps to run.",
             getDefaultValue: () => TestSteps.All);
 
-        var testLogfileOption = new Option<string>(
+        var testLogFileOption = new Option<string>(
             name: "--test-log-file",
             description: "Test log file name used to write and read test results. The file is relative to TestResults folder in each test directory.",
             getDefaultValue: () => "savoniatool.trx");
@@ -98,7 +98,7 @@ public class SubmissionsTestCommand : Command
             description: "Wait time in milliseconds for test runner to finish. Default is 15000 (15 seconds).",
             getDefaultValue: () => 15000);
 
-
+        Add(CommonArguments.SourcePathArgument);
         Add(csvOutputOption);
         Add(testHarnessOption);
         Add(testDataPrefixOption);
@@ -106,14 +106,14 @@ public class SubmissionsTestCommand : Command
         Add(CommonOptions.ExcludesOption);
         Add(CommonOptions.IncludesOption);
         Add(testStepsOption);
-        Add(testLogfileOption);
+        Add(testLogFileOption);
         Add(moodleCsvInputOption);
         Add(selectedSubmissionsOption);
         Add(testRunnerWaitOption);
 
         this.SetHandler(async (context) =>
             {
-                await Handle(context.ParseResult.GetValueForOption(GlobalOptions.SourcePathOption)!,
+                await Handle(context.ParseResult.GetValueForArgument(CommonArguments.SourcePathArgument)!,
                                  context.ParseResult.GetValueForOption(csvOutputOption)!,
                                  context.ParseResult.GetValueForOption(testHarnessOption),
                                  context.ParseResult.GetValueForOption(testDataPrefixOption),
@@ -121,7 +121,7 @@ public class SubmissionsTestCommand : Command
                                  context.ParseResult.GetValueForOption(CommonOptions.IncludesOption)!,
                                  context.ParseResult.GetValueForOption(CommonOptions.ExcludesOption)!,
                                  context.ParseResult.GetValueForOption(testStepsOption),
-                                 context.ParseResult.GetValueForOption(testLogfileOption)!,
+                                 context.ParseResult.GetValueForOption(testLogFileOption)!,
                                  context.ParseResult.GetValueForOption(moodleCsvInputOption),
                                  context.ParseResult.GetValueForOption(selectedSubmissionsOption),
                                  context.ParseResult.GetValueForOption(testRunnerWaitOption),
@@ -137,7 +137,7 @@ public class SubmissionsTestCommand : Command
                         List<string> includes,
                         List<string> excludes,
                         TestSteps steps,
-                        string logfile,
+                        string logFile,
                         string? moodleCsvInput,
                         List<string>? selectedSubmissions,
                         int testRunnerWait,
@@ -172,12 +172,12 @@ public class SubmissionsTestCommand : Command
         if (steps.HasFlag(TestSteps.Test))
         {
             // run tests
-            await RunTests(testDataPrefix, verbose, answerDirectories, testRunnerWait, logfile);
+            await RunTests(testDataPrefix, verbose, answerDirectories, testRunnerWait, logFile);
         }
         if (steps.HasFlag(TestSteps.Results))
         {
             // parse results summary from log files
-            var results = GetTestResults(path, logfile, verbose);
+            var results = GetTestResults(path, logFile, verbose);
             var resultsWithPoints = AddTestPointsToResults(testPoints, verbose, results);
             await WriteResultFile(output, resultsWithPoints, moodleCsvInput, verbose);
         }

@@ -11,7 +11,7 @@ namespace Savonia.Assignment.Tool.Commands;
 
 public class CsvReadCommand : Command
 {
-    public CsvReadCommand() : base("read", "Read a CSV file.")
+    public CsvReadCommand() : base("read", "Read a CSV file and write content to terminal.")
     {
         this.IsHidden = true;
 
@@ -20,19 +20,19 @@ public class CsvReadCommand : Command
             description: "Set to true when the input CSV file has header row.",
             getDefaultValue: () => true);
 
-        var inputCsvDelimeterOption = new Option<string>(
+        var inputCsvDelimiterOption = new Option<string>(
             name: "--input-delimiter",
             description: "Delimiter for the input CSV file.",
             getDefaultValue: () => ",");
 
+        Add(CommonArguments.SourceCsvFileArgument);
         AddOption(inputCsvHasHeaderOption);
-        AddOption(inputCsvDelimeterOption);
-        AddOption(CommonOptions.SourceCsvFileOption);
+        AddOption(inputCsvDelimiterOption);
 
         this.SetHandler(async (context) =>
             {
-                await Handle(context.ParseResult.GetValueForOption(CommonOptions.SourceCsvFileOption)!,
-                                context.ParseResult.GetValueForOption(inputCsvDelimeterOption)!,
+                await Handle(context.ParseResult.GetValueForArgument(CommonArguments.SourceCsvFileArgument)!,
+                                context.ParseResult.GetValueForOption(inputCsvDelimiterOption)!,
                                 context.ParseResult.GetValueForOption(inputCsvHasHeaderOption),
                                 context.ParseResult.GetValueForOption(GlobalOptions.VerboseOption));
             });

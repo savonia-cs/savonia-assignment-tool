@@ -22,7 +22,8 @@ public static class CommonOptions
     /// <summary>
     /// Source csv file.
     /// </summary>
-    public static readonly Option<FileInfo> SourceCsvFileOption;
+    // public static readonly Option<FileInfo> SourceCsvFileOption;
+
     static CommonOptions()
     {
         ExcludesOption = new Option<List<string>>(
@@ -44,8 +45,8 @@ public static class CommonOptions
         // A) --includes **/* 
         //      this will run the globing and the actual values of the globing result is set as includesOption values. On Linux the results depends on how the globstar option is set.
         // B) --includes "**/*" 
-        //      this will set value **/* to the includesOption values AND this will work on Linux as intented regardles of BASH globstar setting status
-        // The default value set here in code will work as intented (to select all files in all directories) on all .NET supported OSes.
+        //      this will set value **/* to the includesOption values AND this will work on Linux as intended regardless of BASH globstar setting status
+        // The default value set here in code will work as intended (to select all files in all directories) on all .NET supported OSes.
         IncludesOption = new Option<List<string>>(
             name: "--includes",
             description: "Folders and files to include.",
@@ -53,29 +54,6 @@ public static class CommonOptions
             {
                 AllowMultipleArgumentsPerToken = true
             };
-
-        SourceCsvFileOption = new Option<FileInfo>(
-            name: "--source",
-            description: "Source CSV file.",
-            isDefault: true,
-            parseArgument: result =>
-            {
-                if (result.Tokens.Count == 0)
-                {
-                    result.ErrorMessage = "Source CSV file is not specified. Use --source option.";
-                    return null;
-                }
-                string? filePath = result.Tokens.Single().Value;
-                if (!File.Exists(filePath))
-                {
-                    result.ErrorMessage = "Source CSV file does not exist";
-                    return null;
-                }
-                else
-                {
-                    return new FileInfo(filePath);
-                }
-            });
     }
 }
 

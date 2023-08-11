@@ -5,13 +5,15 @@ namespace Savonia.Assignment.Tool.Commands;
 
 public class SubmissionsUnpackCommand : Command
 {
-    public SubmissionsUnpackCommand() : base("unpack", "Unpack (unzip) all zip files in defined 'path'. Creates a folder for each zip file where the contents are unpacked and overwrites possible existing files.")
+    public SubmissionsUnpackCommand() : base("unpack", "Unpack (unzip) all zip files in defined source folder. Creates a folder for each zip file where the contents are unpacked and overwrites possible existing files.")
     {
+        Add(CommonArguments.SourcePathArgument);
+
         this.SetHandler(async (path, verbose) =>
             {
                 await Handle(path!, verbose);
             },
-            GlobalOptions.SourcePathOption, GlobalOptions.VerboseOption);
+            CommonArguments.SourcePathArgument, GlobalOptions.VerboseOption);
     }
 
     async Task Handle(DirectoryInfo path,

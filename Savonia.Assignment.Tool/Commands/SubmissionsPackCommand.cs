@@ -7,7 +7,7 @@ namespace Savonia.Assignment.Tool.Commands;
 
 public class SubmissionsPackCommand : Command
 {
-    public SubmissionsPackCommand() : base("pack", "Pack (zip) all submission folders to zip files in defined 'path'. Creates a zip file for each folder and packs the content of the folder excluding the folder itself. Uses the folder name as the name of the zip file and overwrites possible existing file.")
+    public SubmissionsPackCommand() : base("pack", "Pack (zip) all submission folders to zip files in defined source folder. Creates a zip file for each folder and packs the content of the folder excluding the folder itself. Uses the folder name as the name of the zip file and overwrites possible existing file.")
     {
         var zipOutputOption = new Option<string?>(
         name: "--output",
@@ -15,6 +15,7 @@ public class SubmissionsPackCommand : Command
         getDefaultValue: () => null);
         zipOutputOption.AddAlias("-o");
 
+        Add(CommonArguments.SourcePathArgument);
         AddOption(zipOutputOption);
         AddOption(CommonOptions.IncludesOption);
         AddOption(CommonOptions.ExcludesOption);
@@ -22,7 +23,7 @@ public class SubmissionsPackCommand : Command
             {
                 await Handle(path!, includes, excludes, output, verbose);
             },
-            GlobalOptions.SourcePathOption, CommonOptions.IncludesOption, CommonOptions.ExcludesOption, zipOutputOption, GlobalOptions.VerboseOption);
+            CommonArguments.SourcePathArgument, CommonOptions.IncludesOption, CommonOptions.ExcludesOption, zipOutputOption, GlobalOptions.VerboseOption);
     }
 
     async Task Handle(DirectoryInfo path, List<string> includes, List<string> excludes, string? output, bool verbose)
@@ -45,7 +46,7 @@ public class SubmissionsPackCommand : Command
         {
             // when creating a single zip file and the default globing pattern (**/*) for includes is used
             // then use *.zip as the includes pattern to pack only zip files in path directory
-            // and also exlude the output file
+            // and also exclude the output file
             string outputExclude = output!.Replace(path.FullName, string.Empty);
             excludes.Add(outputExclude);
 

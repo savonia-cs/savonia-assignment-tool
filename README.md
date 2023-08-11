@@ -85,7 +85,7 @@ Uses `dotnet test` command to run the tests and assumes that there is a solution
 savoniatool submissions pack
 ```
 
-This will create a zip file for each subdirectory. The subdirectory itself is not included in the zip file, only files and folders inside the subdirectory. The default values for `--includes` and `--excludes` are good for common usage scenario where all subdirectories in directory defined in option `--path` (default is current directory) are to be packed to individual zip files.
+This will create a zip file for each subdirectory. The subdirectory itself is not included in the zip file, only files and folders inside the subdirectory. The default values for `--includes` and `--excludes` are good for common usage scenario where all subdirectories in target directory (default is current directory) are to be packed to individual zip files.
 
 The individual zip files can be packed to a single zip file with command
 
@@ -93,7 +93,7 @@ The individual zip files can be packed to a single zip file with command
 savoniatool submissions pack -o submissions.zip
 ```
 
-Defining value for option `--output` or `-o` will change the packing behavior to pack resulting files to a single zip file. The default values for `--includes` and `--excludes` are good for common usage scenario where all zip files in directory defined in option `--path` (default is current directory) are to be packed to a single zip file.
+Defining value for option `--output` or `-o` will change the packing behavior to pack resulting files to a single zip file. The default values for `--includes` and `--excludes` are good for common usage scenario where all zip files in target directory (default is current directory) are to be packed to a single zip file.
 
 
 ### To create hash
@@ -113,20 +113,20 @@ This will find all **.cs* files in all directories and creates a hash from the f
 - To check for duplicate hashes
 
 ```dotnetcli
-savoniatool hash compare --source hashes.csv -o duplicates.csv
+savoniatool hash compare hashes.csv -o duplicates.csv
 ```
 
-This will read hashes from source file and write duplicates to output file. By default hash values are read from the last column. Set `--hash-index` option with zero-based index for the hash column if it is not the last column. Define `-v` (or `--verbose`) to see the duplicates in terminal.
+This will read hashes from source file `hashes.csv` and write duplicates to output file. By default hash values are read from the last column. Set `--hash-index` option with zero-based index for the hash column if it is not the last column. Define `-v` (or `--verbose`) to see the duplicates in terminal.
 
 ### To open duplicates in editor
 
 - To open duplicate source files in editor for manual checking
 
 ```dotnetcli
-savoniatool hash open --source duplicates.csv
+savoniatool hash open duplicates.csv
 ```
 
-This will read hash groups (files that create the same hash value) from source file and open the files with an editor. Uses VS Code as default option to open the files and assumes that the editor is in PATH to allow opening from terminal. Reads filename from the first column and hash value from the last column. Define zero-based index values for options `--file-index` and `--hash-index` if first and last column assumptions are not valid for source file.
+This will read hash groups (files that create the same hash value) from source file `duplicates.csv` and open the files with an editor. Uses VS Code as default editor to open the files and assumes that the editor is in PATH environment variable to allow opening from terminal. Reads filename from the first column and hash value from the last column. Define zero-based index values for options `--file-index` and `--hash-index` if first and last column assumptions are not valid for source file.
 
 > NOTE! This will try to open as many instances of the editor as there are hash groups in the source file. Each instance will open all code files within the hash group. **This may result in excess amounts of editor instances**.
 
@@ -135,10 +135,10 @@ This will read hash groups (files that create the same hash value) from source f
 - To parse required fields from a CSV. The file could be for example downloaded from Moodle LMS's Task activity.
 
 ```dotnetcli
-savoniatool csv parse --source moodle-csv-file.csv --fields 1 2 3 -o parsed.csv --field-filters 1 \d+
+savoniatool csv parse moodle-csv-file.csv --fields 1 2 3 -o parsed.csv --field-filters 1 \d+
 ```
 
-This reads fields (or columns) 1, 2 and 3 from source CSV file. Uses regex filter (\d+) to get only numbers from the field 1 and outputs the result to parsed.csv file. The `--field-filters` option is used to define how the selected fields are parsed with regex pattern(s). The regex pattern can be defined in the --field-filters option directly or to a JSON file that is read with option `--regexes`. The JSON file must contain the regexes as a key-value pair (or dictionary with string keys and string values) like:
+This reads fields (or columns) 1, 2 and 3 from source CSV file (`moodle-csv-file.csv`). Uses regex filter (\d+) to get only numbers from the field 1 and outputs the result to parsed.csv file. The `--field-filters` option is used to define how the selected fields are parsed with regex pattern(s). The regex pattern can be defined in the --field-filters option directly or to a JSON file that is read with option `--regexes`. The JSON file must contain the regexes as a key-value pair (or dictionary with string keys and string values) like:
 
 ```json
 {

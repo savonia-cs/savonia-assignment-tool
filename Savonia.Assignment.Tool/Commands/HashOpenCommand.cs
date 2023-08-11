@@ -20,7 +20,7 @@ public class HashOpenCommand : Command
 
         var editorOption = new Option<string>(
             name: "--editor",
-            description: "Editor executable name. The executable should be in the PATH.",
+            description: "Editor executable name. The executable should be in the PATH environment variable.",
             getDefaultValue: () => "code");
 
         var editorParamsOption = new Option<string>(
@@ -28,7 +28,7 @@ public class HashOpenCommand : Command
             description: "Parameters for the editor executable.",
             getDefaultValue: () => "-n");
 
-        Add(CommonOptions.SourceCsvFileOption);
+        Add(CommonArguments.SourceCsvFileArgument);
         Add(HashCommand.HashIndexOption);
         Add(fileIndexOption);
         Add(editorOption);
@@ -38,7 +38,7 @@ public class HashOpenCommand : Command
             {
                 await Handle(file!, hashIndex, fileIndex, editor, editorParams, verbose);
             },
-            CommonOptions.SourceCsvFileOption, HashCommand.HashIndexOption, fileIndexOption, editorOption, editorParamsOption, GlobalOptions.VerboseOption);        
+            CommonArguments.SourceCsvFileArgument, HashCommand.HashIndexOption, fileIndexOption, editorOption, editorParamsOption, GlobalOptions.VerboseOption);        
     }
 
     async Task Handle(FileInfo file, int? hashIndex, int? fileIndex, string editor, string editorParams, bool verbose)
@@ -48,6 +48,9 @@ public class HashOpenCommand : Command
             Console.WriteLine($"Source file \"{file.FullName}\" does not exist.");
             return;
         }
+
+        Directory.SetCurrentDirectory(file.DirectoryName);
+
         if (verbose)
         {
             Console.WriteLine($"Opening hash groups from source \"{file.Name}\" with editor \"{editor}\"");

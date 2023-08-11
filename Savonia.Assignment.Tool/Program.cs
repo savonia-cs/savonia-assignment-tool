@@ -16,8 +16,7 @@ class Program
 {
     static async Task<int> Main(string[] args)
     {
-        var rootCommand = new RootCommand("Savonia tool for assingments");
-        rootCommand.AddGlobalOption(GlobalOptions.SourcePathOption);
+        var rootCommand = new RootCommand("Savonia tool for assignments");
         rootCommand.AddGlobalOption(GlobalOptions.VerboseOption);
 
         rootCommand.AddCommand(new SolutionCommand());

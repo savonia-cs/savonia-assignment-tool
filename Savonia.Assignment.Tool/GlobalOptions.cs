@@ -9,41 +9,12 @@ namespace Savonia.Assignment.Tool;
 public static class GlobalOptions
 {
     /// <summary>
-    /// Source path to operate on. 
-    /// Is the current path (./) by default.
-    /// </summary>
-    public static readonly Option<DirectoryInfo?> SourcePathOption;
-    /// <summary>
     /// Verbose option. Set true to enable verbose messages.
     /// Default is false.
     /// </summary>
     public static readonly Option<bool> VerboseOption;
     static GlobalOptions()
     {
-        // path default is current working directory if no path is defined
-        SourcePathOption = new Option<DirectoryInfo?>(
-            name: "--path",
-            description: "Source path to operate on",
-            isDefault: true,
-            parseArgument: result =>
-            {
-                if (result.Tokens.Count == 0)
-                {
-                    return new DirectoryInfo("./");
-
-                }
-                string? path = result.Tokens.Single().Value;
-                if (!Directory.Exists(path))
-                {
-                    result.ErrorMessage = "Directory does not exist";
-                    return null;
-                }
-                else
-                {
-                    return new DirectoryInfo(path);
-                }
-            });
-
         VerboseOption = new Option<bool>(
             name: "--verbose",
             description: "Show verbose output.",
