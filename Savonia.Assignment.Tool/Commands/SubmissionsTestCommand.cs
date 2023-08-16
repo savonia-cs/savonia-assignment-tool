@@ -57,6 +57,11 @@ public class SubmissionsTestCommand : Command
                 }
             });
 
+        var testHarnessTargetOption = new Option<string?>(
+            name: "--test-harness-target",
+            description: "Target directory in submissions folder to where the test harness is copied. Default is '' (i.e. the submission folder)."
+        );
+
         var testDataPrefixOption = new Option<string>(
             name: "--test-data-prefix",
             description: "Prefix to add to test data file names before reading the test data. Is used to run tests with different test data.",
@@ -101,6 +106,7 @@ public class SubmissionsTestCommand : Command
         Add(CommonArguments.SourcePathArgument);
         Add(csvOutputOption);
         Add(testHarnessOption);
+        Add(testHarnessTargetOption);
         Add(testDataPrefixOption);
         Add(testPointsOption);
         Add(CommonOptions.ExcludesOption);
@@ -116,6 +122,7 @@ public class SubmissionsTestCommand : Command
                 await Handle(context.ParseResult.GetValueForArgument(CommonArguments.SourcePathArgument)!,
                                  context.ParseResult.GetValueForOption(csvOutputOption)!,
                                  context.ParseResult.GetValueForOption(testHarnessOption),
+                                 context.ParseResult.GetValueForOption(testHarnessTargetOption),
                                  context.ParseResult.GetValueForOption(testDataPrefixOption),
                                  context.ParseResult.GetValueForOption(testPointsOption),
                                  context.ParseResult.GetValueForOption(CommonOptions.IncludesOption)!,
@@ -132,6 +139,7 @@ public class SubmissionsTestCommand : Command
     async Task Handle(DirectoryInfo path,
                         string output,
                         DirectoryInfo? testHarness,
+                        string? testHarnessTarget,
                         string? testDataPrefix,
                         List<int>? testPoints,
                         List<string> includes,
@@ -165,7 +173,7 @@ public class SubmissionsTestCommand : Command
                 matcher.AddIncludePatterns(includes);
                 matcher.AddExcludePatterns(excludes);
                 var testHarnessFilesToCopy = matcher.GetResultsInFullPath(testHarness.FullName).ToList();
-                CopyTestHarness(testHarness, verbose, testHarnessFilesToCopy, answerDirectories);
+                CopyTestHarness(testHarness, testHarnessTarget, verbose, testHarnessFilesToCopy, answerDirectories);
             }
         }
 
@@ -404,6 +412,11 @@ public class SubmissionsTestCommand : Command
             {
                 Console.WriteLine($"- {student} / {test} = {resultValue?.Value}");
             }
+
+            // TODO: gather failed tests info and create a summary file for each student with the failed tests
+            // Save the summary in the submission root folder for each student
+            // Then the summary file can be copied to GitHub (commit and push) or be added to a pull request
+
             results.Add((student, test, resultValue?.Value ?? ""));
         }
         return results;
@@ -427,7 +440,9 @@ public class SubmissionsTestCommand : Command
         {
             if (verbose)
             {
-                Console.WriteLine($"{counter++,4} {answerDir.Name}");
+                Console.WriteLine();
+                Console.WriteLine($"----");
+                Console.WriteLine($"{counter,4} {answerDir.Name}");
             }
             try
             {
@@ -449,10 +464,16 @@ public class SubmissionsTestCommand : Command
             {
                 Console.WriteLine($"*****\nError executing the test runner on {answerDir.Name}:\n{e.Message}\n*****");
             }
+            if (verbose)
+            {
+                Console.WriteLine();
+                Console.WriteLine($"{counter} of {answerDirectoriesCount} tests completed.");
+            }
+            counter++;
         }
     }
 
-    private void CopyTestHarness(DirectoryInfo testHarness, bool verbose, List<string> testHarnessFilesToCopy, DirectoryInfo[] answerDirectories)
+    private void CopyTestHarness(DirectoryInfo testHarness, string? testHarnessTarget, bool verbose, List<string> testHarnessFilesToCopy, DirectoryInfo[] answerDirectories)
     {
         if (verbose)
         {
@@ -468,13 +489,20 @@ public class SubmissionsTestCommand : Command
         {
             if (verbose)
             {
-                Console.WriteLine($"- {answerDir.Name}");
+                if (null != testHarnessTarget)
+                {
+                    Console.WriteLine($"- {answerDir.Name}/{testHarnessTarget}");
+                }
+                else
+                {
+                    Console.WriteLine($"- {answerDir.Name}");
+                }
             }
             foreach (string file in testHarnessFilesToCopy)
             {
                 string relativeFile = Path.GetRelativePath(testHarness.FullName, file);
                 FileInfo sourceFile = new FileInfo(file);
-                string destinationFile = Path.Combine(answerDir.FullName, relativeFile);
+                string destinationFile = Path.Combine(answerDir.FullName, testHarnessTarget ?? "", relativeFile);
                 DirectoryInfo destinationPath = new DirectoryInfo(Path.GetDirectoryName(destinationFile));
                 if (verbose)
                 {
