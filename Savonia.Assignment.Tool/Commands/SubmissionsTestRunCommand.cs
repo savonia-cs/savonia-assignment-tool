@@ -172,8 +172,11 @@ public class SubmissionsTestRunCommand : Command
             }
             summary.Points = summary.SummaryItems.Sum(i => i.Points);
             FileInfo summaryFileInfo = new FileInfo(Path.Combine(answerDir.FullName, summaryFile));
-            await System.Text.Json.JsonSerializer.SerializeAsync(summaryFileInfo.OpenWrite(), summary, new JsonSerializerOptions() { WriteIndented = true, PropertyNameCaseInsensitive = true });
-            
+            using (var stream = summaryFileInfo.OpenWrite())
+            {
+                await System.Text.Json.JsonSerializer.SerializeAsync(stream, summary, new JsonSerializerOptions() { WriteIndented = true, PropertyNameCaseInsensitive = true });
+            }
+
             if (verbose)
             {
                 Console.WriteLine();
