@@ -132,6 +132,10 @@ public class SubmissionsTestRunCommand : Command
             };
             if (false == string.IsNullOrEmpty(tests.Preparation))
             {
+                if (verbose)
+                {
+                    Console.WriteLine($"    - running test preparation with command: '{tests.Preparation}'");
+                }
                 try
                 {
                     var preparationCommand = tests.Preparation.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -198,6 +202,10 @@ public class SubmissionsTestRunCommand : Command
             }
             if (false == string.IsNullOrEmpty(tests.Cleanup))
             {
+                if (verbose)
+                {
+                    Console.WriteLine($"    - running test cleanup with command: '{tests.Cleanup}'");
+                }
                 try
                 {
                     var cleanupCommand = tests.Cleanup.Split(' ', StringSplitOptions.RemoveEmptyEntries);
