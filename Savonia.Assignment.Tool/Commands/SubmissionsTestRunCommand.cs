@@ -130,6 +130,26 @@ public class SubmissionsTestRunCommand : Command
                 Submission = answerDir.Name,
                 TestRunTime = DateTime.Now,
             };
+            if (false == string.IsNullOrEmpty(tests.Preparation))
+            {
+                try
+                {
+                    var preparationCommand = tests.Preparation.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    ProcessStartInfo psi = new ProcessStartInfo(preparationCommand[0], $"{string.Join(' ', preparationCommand.Skip(1))}");
+                    psi.WorkingDirectory = answerDir.FullName;
+                    psi.UseShellExecute = false;
+                    psi.CreateNoWindow = false;
+                    var p = Process.Start(psi);
+                    if (null != p)
+                    {
+                        await p.WaitForExitAsync();
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"*****\nError executing the test preparation command '{tests.Preparation}' on {answerDir.Name}:\n{e.Message}\n*****");
+                }
+            }
             foreach (var test in tests.Tests)
             {
                 if (verbose)
@@ -176,6 +196,27 @@ public class SubmissionsTestRunCommand : Command
             {
                 await System.Text.Json.JsonSerializer.SerializeAsync(stream, summary, new JsonSerializerOptions() { WriteIndented = true, PropertyNameCaseInsensitive = true });
             }
+            if (false == string.IsNullOrEmpty(tests.Cleanup))
+            {
+                try
+                {
+                    var cleanupCommand = tests.Cleanup.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    ProcessStartInfo psi = new ProcessStartInfo(cleanupCommand[0], $"{string.Join(' ', cleanupCommand.Skip(1))}");
+                    psi.WorkingDirectory = answerDir.FullName;
+                    psi.UseShellExecute = false;
+                    psi.CreateNoWindow = false;
+                    var p = Process.Start(psi);
+                    if (null != p)
+                    {
+                        await p.WaitForExitAsync();
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"*****\nError executing the test cleanup command '{tests.Cleanup}' on {answerDir.Name}:\n{e.Message}\n*****");
+                }
+            }
+
 
             if (verbose)
             {

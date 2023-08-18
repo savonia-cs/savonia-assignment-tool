@@ -10,6 +10,10 @@ public class GitHubClassroomTests
 {
     [JsonPropertyName("tests")]
     public List<Test> Tests { get; set; }
+    [JsonPropertyName("preparation")]
+    public string? Preparation { get; set; }
+    [JsonPropertyName("cleanup")]
+    public string? Cleanup { get; set; }
 }
 
 /// <summary>
