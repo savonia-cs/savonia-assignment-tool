@@ -16,7 +16,7 @@ public class SubmissionsTestCommand : Command
     {
         AddCommand(new SubmissionsTestCopyCommand());
         AddCommand(new SubmissionsTestRunCommand());
-        // AddCommand(new SubmissionsPackCommand());
+        AddCommand(new SubmissionsTestSummaryCommand());
         // AddCommand(new SubmissionsListCommand());
     }
 
