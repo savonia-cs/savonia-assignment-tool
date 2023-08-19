@@ -127,6 +127,7 @@ public class SubmissionsTestRunCommand : Command
             TestRunSummary summary = new TestRunSummary()
             {
                 MaximumPoints = tests.Tests.Sum(t => t.Points),
+                Assignment = answerDir.Parent?.Name,
                 Submission = answerDir.Name,
                 TestRunTime = DateTime.Now,
             };
@@ -165,6 +166,7 @@ public class SubmissionsTestRunCommand : Command
                 {
                     RunCommand = test.Run,
                     TestName = test.Name,
+                    Path = testCommands.Skip(2).FirstOrDefault()
                 };
                 try
                 {

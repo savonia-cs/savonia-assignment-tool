@@ -5,16 +5,18 @@ namespace Savonia.Assignment.Tool.Models;
 
 public class TestRunSummary
 {
+    public string? Assignment { get; set; }
     public string Submission { get; set; }
+    public int Points { get; set; }
+    public int MaximumPoints { get; set; }
     public DateTime TestRunTime { get; set; }
     public List<TestRunSummaryItem> SummaryItems { get; set; } = new List<TestRunSummaryItem>();
-    public int MaximumPoints { get; set; }
-    public int Points { get; set; }
 }
 
 public class TestRunSummaryItem
 {
     public string TestName { get; set; }
+    public string? Path { get; set; }
     public string RunCommand { get; set; }
     public int RunnerExitCode { get; set; } = -1;
     public string Outcome { get; set; }
