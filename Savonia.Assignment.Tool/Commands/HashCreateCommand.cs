@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.FileSystemGlobbing;
+using Savonia.Assignment.Tool.Helpers;
 
 namespace Savonia.Assignment.Tool.Commands;
 
@@ -11,11 +12,10 @@ public class HashCreateCommand : Command
 {
     public HashCreateCommand() : base("create", "Create comparable hashes of code files in defined folder.")
     {
-        var csvOutputOption = new Option<string?>(
-            name: "--output",
+        var csvOutputArgument = new Argument<string?>(
+            name: "hashesOutput",
             description: "Output csv file. This will overwrite possible existing file. By default the csv file is named the same as the source folder name with \"-hashes.csv\" appended to the end.",
             getDefaultValue: () => null);
-        csvOutputOption.AddAlias("-o");
 
         // regex filters for code comments in C#, see https://stackoverflow.com/a/3524689
         var commentRegexFiltersOption = new Option<List<string>>(
@@ -39,19 +39,25 @@ public class HashCreateCommand : Command
             description: "Filter files before hashing.",
             getDefaultValue: () => SourceCodeFilters.All);
 
+        var folderHashOption = new Option<bool>(
+            name: "--folder-hash",
+            description: "Combine selected files in folder to one hash.",
+            getDefaultValue: () => false);
+
         Add(CommonArguments.SourcePathArgument);
-        Add(csvOutputOption);
+        Add(csvOutputArgument);
         Add(CommonOptions.IncludesOption);
         Add(CommonOptions.ExcludesOption);
         Add(commentRegexFiltersOption);
         Add(startingBlockCommentOption);
         Add(startingLineCommentOption);
         Add(filterSourceCodeOption);
+        Add(folderHashOption);
 
         this.SetHandler(async (context) =>
             {
                 var folder = context.ParseResult.GetValueForArgument(CommonArguments.SourcePathArgument)!;
-                var output = context.ParseResult.GetValueForOption(csvOutputOption) ?? $"{folder.Name}-hashes.csv";
+                var output = context.ParseResult.GetValueForArgument(csvOutputArgument) ?? $"{folder.Name}-hashes.csv";
                 await Handle(folder,
                                 output,
                                 context.ParseResult.GetValueForOption(CommonOptions.IncludesOption)!,
@@ -60,6 +66,7 @@ public class HashCreateCommand : Command
                                 context.ParseResult.GetValueForOption(startingBlockCommentOption)!,
                                 context.ParseResult.GetValueForOption(startingLineCommentOption)!,
                                 context.ParseResult.GetValueForOption(filterSourceCodeOption),
+                                context.ParseResult.GetValueForOption(folderHashOption),
                                 context.ParseResult.GetValueForOption(GlobalOptions.VerboseOption));
             });            
     }
@@ -71,8 +78,8 @@ public class HashCreateCommand : Command
                         List<string> commentRegex,
                         string startingBlockComment,
                         string startingLineComment,
-                        // bool filterFiles,
                         SourceCodeFilters filterFiles,
+                        bool folderHash,
                         bool verbose)
     {
         // if 'output' is written to 'path' then set it to excludes list
@@ -83,9 +90,17 @@ public class HashCreateCommand : Command
         matcher.AddIncludePatterns(includes);
         matcher.AddExcludePatterns(excludes);
 
+        if (folderHash)
+        {
+            Console.WriteLine($"Creating hashes for folders in '{path.Name}'");
+        }
+        else
+        {
+            Console.WriteLine($"Creating hashes for files from folders in '{path.Name}'");
+        }
+        Console.WriteLine();
         if (verbose)
         {
-            Console.WriteLine($"Creating hashes from folder '{path.Name}'");
             Console.WriteLine($"- include pattern: {string.Join(" ", includes)}");
             Console.WriteLine($"- exclude pattern: {string.Join(" ", excludes)}");
             Console.WriteLine();
@@ -107,18 +122,20 @@ public class HashCreateCommand : Command
                 }
                 Console.WriteLine();
             }
-            Console.WriteLine($"Result is saved to '{output}' file.");
         }
+        Console.WriteLine($"Result is saved to '{output}' file.");
 
         if (File.Exists(output))
         {
             File.Delete(output);
         }
 
-        StringBuilder resultBuilder = new StringBuilder();
+        Dictionary<string, Tuple<string, string>> fileHashes = new Dictionary<string, Tuple<string, string>>();
+        var baseDirParts = path.DirectorySplit();
         foreach (string file in matcher.GetResultsInFullPath(path.FullName))
         {
             string relativeFile = Path.GetRelativePath(path.FullName, file);
+            string key = new DirectoryInfo(file).DirectoryPart(baseDirParts, 0);
 
             if (verbose)
             {
@@ -137,11 +154,32 @@ public class HashCreateCommand : Command
             {
                 fileContent = fileContent.Replace(" ", "");
             }
-            var hash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(fileContent)));
-
-            resultBuilder.AppendLine($"\"{relativeFile}\",\"{hash}\"");
+            var hash = SHA256.HashData(Encoding.UTF8.GetBytes(fileContent)).ToBase64UrlEncoded();
+            fileHashes.Add(relativeFile, new Tuple<string, string>(key, hash));
         }
-        await File.WriteAllTextAsync(output, resultBuilder.ToString());
+        // StringBuilder resultBuilder = new StringBuilder();
+        // resultBuilder.AppendLine($"\"{relativeFile}\",\"{hash}\"");
+        using (var stream = File.OpenWrite(output))
+        using (var writer = new StreamWriter(stream))
+        {
+            if (folderHash)
+            {
+                var folderHashes = fileHashes.Values.GroupBy(v => v.Item1);
+                foreach (var fh in folderHashes)
+                {
+                    var folderFileHashes = fh.Select(f => f.Item2);
+                    var folderFilesHash = SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("", folderFileHashes))).ToBase64UrlEncoded();                       
+                    await writer.WriteLineAsync($"\"{fh.Key}\",\"{folderFilesHash}\"");
+                }
+            }
+            else
+            {
+                foreach (var fileHash in fileHashes)
+                {
+                    await writer.WriteLineAsync($"\"{fileHash.Key}\",\"{fileHash.Value.Item2}\"");
+                }
+            }
+        }
     }
 
     /// <summary>
