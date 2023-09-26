@@ -17,7 +17,7 @@ public class SubmissionsTestCommand : Command
         AddCommand(new SubmissionsTestCopyCommand());
         AddCommand(new SubmissionsTestRunCommand());
         AddCommand(new SubmissionsTestSummaryCommand());
-        // AddCommand(new SubmissionsListCommand());
+        AddCommand(new SubmissionsTestConvertCommand());
     }
 
     internal static DirectoryInfo[] SelectSubmissionFolders(DirectoryInfo path, List<string>? selectedSubmissions, bool verbose)
