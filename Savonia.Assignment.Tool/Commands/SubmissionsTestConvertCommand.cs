@@ -141,6 +141,11 @@ public class SubmissionsTestConvertCommand : Command
                 var testRunSummary = JsonSerializer.Deserialize<TestRunSummary>(await File.ReadAllTextAsync(testSummary));
                 var mdFile = GetMdFilename(submission, mdPrefix, mdRegex, mdSuffix) ?? Path.ChangeExtension(submissionSummaryFile, ".md");
                 mdFile = Path.Combine(destinationPath ?? submission.FullName, mdFile);
+                DirectoryInfo di = new DirectoryInfo(Path.GetDirectoryName(mdFile));
+                if (false == di.Exists)
+                {
+                    di.Create();
+                }
                 if (verbose)
                 {
                     Console.WriteLine($"- converting summary file '{testSummary}' to '{mdFile}'");
