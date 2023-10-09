@@ -10,6 +10,8 @@ public class TestRunSummary
     public int Points { get; set; }
     public int MaximumPoints { get; set; }
     public DateTime TestRunTime { get; set; }
+    public int? PreparationExitCode { get; set; }
+    public int? CleanupExitCode { get; set; }
     public List<TestRunSummaryItem> SummaryItems { get; set; } = new List<TestRunSummaryItem>();
 }
 

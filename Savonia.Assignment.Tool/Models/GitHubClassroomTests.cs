@@ -11,9 +11,28 @@ public class GitHubClassroomTests
     [JsonPropertyName("tests")]
     public List<Test> Tests { get; set; }
     [JsonPropertyName("preparation")]
-    public string? Preparation { get; set; }
+    public Executable? Preparation { get; set; }
     [JsonPropertyName("cleanup")]
-    public string? Cleanup { get; set; }
+    public Executable? Cleanup { get; set; }
+}
+
+public class Executable
+{
+    [JsonPropertyName("command")]
+    public string CommandName { get; set; }
+    [JsonPropertyName("arguments")]
+    public string? Arguments { get; set; }
+    [JsonPropertyName("successExitCode")]
+    public int SuccessExitCode { get; set; }
+    [JsonPropertyName("timeout")]
+    public int? Timeout { get; set; }
+    [JsonPropertyName("points")]
+    public int? Points { get; set; }
+
+    public override string ToString()
+    {
+        return string.Join(' ', CommandName, Arguments);
+    }
 }
 
 /// <summary>

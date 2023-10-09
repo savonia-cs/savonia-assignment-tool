@@ -126,12 +126,13 @@ public class SubmissionsTestRunCommand : Command
             }
             TestRunSummary summary = new TestRunSummary()
             {
-                MaximumPoints = tests.Tests.Sum(t => t.Points),
+                MaximumPoints = tests.Tests.Sum(t => t.Points) + (tests.Preparation?.Points ?? 0) + (tests.Cleanup?.Points ?? 0),
                 Assignment = answerDir.Parent?.Name,
                 Submission = answerDir.Name,
                 TestRunTime = DateTime.Now,
+                Points = 0
             };
-            if (false == string.IsNullOrEmpty(tests.Preparation))
+            if (tests.Preparation is not null)
             {
                 if (verbose)
                 {
@@ -139,8 +140,8 @@ public class SubmissionsTestRunCommand : Command
                 }
                 try
                 {
-                    var preparationCommand = tests.Preparation.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    ProcessStartInfo psi = new ProcessStartInfo(preparationCommand[0], $"{string.Join(' ', preparationCommand.Skip(1))}");
+                    // var preparationCommand = tests.Preparation.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    ProcessStartInfo psi = new ProcessStartInfo(tests.Preparation.CommandName, tests.Preparation.Arguments ?? string.Empty);
                     psi.WorkingDirectory = answerDir.FullName;
                     psi.UseShellExecute = false;
                     psi.CreateNoWindow = false;
@@ -148,6 +149,11 @@ public class SubmissionsTestRunCommand : Command
                     if (null != p)
                     {
                         await p.WaitForExitAsync();
+                        summary.PreparationExitCode = p.ExitCode;
+                        if (tests.Preparation.SuccessExitCode == p.ExitCode)
+                        {
+                            summary.Points += tests.Preparation.Points ?? 0;
+                        }
                     }
                 }
                 catch (Exception e)
@@ -196,7 +202,39 @@ public class SubmissionsTestRunCommand : Command
 
                 summary.SummaryItems.Add(summaryItem);
             }
-            summary.Points = summary.SummaryItems.Sum(i => i.Points);
+            summary.Points += summary.SummaryItems.Sum(i => i.Points);
+            
+            if (tests.Cleanup is not null)
+            {
+                if (verbose)
+                {
+                    Console.WriteLine($"    - running test cleanup with command: '{tests.Cleanup}'");
+                }
+                try
+                {
+                    // var cleanupCommand = tests.Cleanup.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    ProcessStartInfo psi = new ProcessStartInfo(tests.Cleanup.CommandName, tests.Cleanup.Arguments ?? string.Empty);
+                    psi.WorkingDirectory = answerDir.FullName;
+                    psi.UseShellExecute = false;
+                    psi.CreateNoWindow = false;
+                    var p = Process.Start(psi);
+                    if (null != p)
+                    {
+                        await p.WaitForExitAsync();
+                        summary.CleanupExitCode = p.ExitCode;
+                        if (tests.Cleanup.SuccessExitCode == p.ExitCode)
+                        {
+                            summary.Points += tests.Cleanup.Points ?? 0;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"*****\nError executing the test cleanup command '{tests.Cleanup}' on {answerDir.Name}:\n{e.Message}\n*****");
+                }
+            }
+
+            // write summary to file
             FileInfo summaryFileInfo = new FileInfo(Path.Combine(answerDir.FullName, summaryFile));
             if (summaryFileInfo.Exists)
             {
@@ -206,31 +244,6 @@ public class SubmissionsTestRunCommand : Command
             {
                 await System.Text.Json.JsonSerializer.SerializeAsync(stream, summary, new JsonSerializerOptions() { WriteIndented = true, PropertyNameCaseInsensitive = true });
             }
-            if (false == string.IsNullOrEmpty(tests.Cleanup))
-            {
-                if (verbose)
-                {
-                    Console.WriteLine($"    - running test cleanup with command: '{tests.Cleanup}'");
-                }
-                try
-                {
-                    var cleanupCommand = tests.Cleanup.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    ProcessStartInfo psi = new ProcessStartInfo(cleanupCommand[0], $"{string.Join(' ', cleanupCommand.Skip(1))}");
-                    psi.WorkingDirectory = answerDir.FullName;
-                    psi.UseShellExecute = false;
-                    psi.CreateNoWindow = false;
-                    var p = Process.Start(psi);
-                    if (null != p)
-                    {
-                        await p.WaitForExitAsync();
-                    }
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine($"*****\nError executing the test cleanup command '{tests.Cleanup}' on {answerDir.Name}:\n{e.Message}\n*****");
-                }
-            }
-
 
             if (verbose)
             {
