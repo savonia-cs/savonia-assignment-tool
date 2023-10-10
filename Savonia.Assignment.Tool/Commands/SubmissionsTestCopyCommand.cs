@@ -13,20 +13,20 @@ public class SubmissionsTestCopyCommand : Command
 {
     // savoniatool submissions test copy <testHarnessPath> <submissionPath> --selected-submissions 1-10 --test-harness-target tests --includes *.csproj --excludes bin,obj,TestResults,src,solution
 
-    public SubmissionsTestCopyCommand() : base("copy", "Copy test harness to selected submissions.")
+    public SubmissionsTestCopyCommand() : base("copy", "Copy test harness or other assets to selected submissions.")
     {
 
-        var testHarnessPathArgument = new Argument<DirectoryInfo>(
-            name: "testHarnessPath",
-            description: "Test harness path from where to copy the test harness to each submission folder."
+        var assetsPathArgument = new Argument<DirectoryInfo>(
+            name: "assetPath",
+            description: "Assets path from where to copy the files and folders to each submission folder."
             );
 
-        testHarnessPathArgument.AddValidator(result =>
+        assetsPathArgument.AddValidator(result =>
         {
-            var path = result.GetValueForArgument(testHarnessPathArgument).FullName ?? string.Empty;
+            var path = result.GetValueForArgument(assetsPathArgument).FullName ?? string.Empty;
             if (false == Directory.Exists(path))
             {
-                result.ErrorMessage = $"Test harness path '{path}' does not exist";
+                result.ErrorMessage = $"Assets path '{path}' does not exist";
             }
         });
 
@@ -57,7 +57,7 @@ public class SubmissionsTestCopyCommand : Command
             AllowMultipleArgumentsPerToken = true
         };
 
-        Add(testHarnessPathArgument);
+        Add(assetsPathArgument);
         Add(submissionsPathArgument);
         Add(testHarnessTargetOption);
         Add(CommonOptions.ExcludesOption);
@@ -68,7 +68,7 @@ public class SubmissionsTestCopyCommand : Command
         {
             await Handle(testHarnessPath, submissionsPath, testHarnessTarget, includes, excludes, selectedSubmissions, verbose);
         },
-        testHarnessPathArgument, submissionsPathArgument, testHarnessTargetOption, CommonOptions.IncludesOption, CommonOptions.ExcludesOption, selectedSubmissionsOption, GlobalOptions.VerboseOption);
+        assetsPathArgument, submissionsPathArgument, testHarnessTargetOption, CommonOptions.IncludesOption, CommonOptions.ExcludesOption, selectedSubmissionsOption, GlobalOptions.VerboseOption);
     }
 
     async Task Handle(DirectoryInfo testHarnessPath,
