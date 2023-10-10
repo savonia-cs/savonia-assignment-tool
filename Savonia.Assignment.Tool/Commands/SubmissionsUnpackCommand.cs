@@ -27,7 +27,7 @@ public class SubmissionsUnpackCommand : Command
 
     async Task Handle(DirectoryInfo path, List<string>? charactersToRemove, bool verbose)
     {
-
+        Directory.SetCurrentDirectory(path.FullName);
         var zipFiles = path.GetFiles().Where(f => f.Extension.Equals(".zip", StringComparison.InvariantCultureIgnoreCase));
         var zipFilesCount = zipFiles.Count();
         if (verbose)
