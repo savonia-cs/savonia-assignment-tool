@@ -12,6 +12,7 @@ public class TestRunSummary
     public DateTime TestRunTime { get; set; }
     public int? PreparationExitCode { get; set; }
     public int? CleanupExitCode { get; set; }
+    public string? Feedback { get; set; }
     public List<TestRunSummaryItem> SummaryItems { get; set; } = new List<TestRunSummaryItem>();
 }
 
