@@ -154,6 +154,10 @@ public class SubmissionsTestRunCommand : Command
                         {
                             summary.Points += tests.Preparation.Points ?? 0;
                         }
+                        else
+                        {
+                            Console.WriteLine($"\t-preparation command '{tests.Preparation}' on {answerDir.Name} exited with non-success code {p.ExitCode}");        
+                        }
                     }
                 }
                 catch (Exception e)
@@ -225,6 +229,10 @@ public class SubmissionsTestRunCommand : Command
                         if (tests.Cleanup.SuccessExitCode == p.ExitCode)
                         {
                             summary.Points += tests.Cleanup.Points ?? 0;
+                        }
+                        else
+                        {
+                            Console.WriteLine($"\t-cleanup command '{tests.Cleanup}' on {answerDir.Name} exited with non-success code {p.ExitCode}");        
                         }
                     }
                 }
