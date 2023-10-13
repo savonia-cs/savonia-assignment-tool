@@ -1,4 +1,7 @@
-﻿namespace Savonia.Assignment.Tool.Helpers;
+﻿using System.Xml.Serialization;
+using VSTest;
+
+namespace Savonia.Assignment.Tool.Helpers;
 
 public static class FileHelpers
 {
@@ -83,6 +86,17 @@ public static class FileHelpers
         string[] parts = subDir.DirectorySplit(baseDirParts).ToArray();
         int l = parts.Length;
         return index >= 0 && index < l ? parts[l - 1 - index] : "";
+    }
+
+    public static TestRunType ReadTestRunResults(this FileInfo file)
+    {
+        TestRunType testRun = new TestRunType();
+        using (var fs = file.OpenRead())
+        {
+            var serializer = new XmlSerializer(typeof(TestRunType));
+            testRun = serializer.Deserialize(fs) as TestRunType;
+        }
+        return testRun;
     }
 }
 

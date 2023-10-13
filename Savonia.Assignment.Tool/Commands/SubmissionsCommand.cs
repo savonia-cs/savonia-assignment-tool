@@ -12,6 +12,7 @@ public class SubmissionsCommand : Command
         AddCommand(new SubmissionsTestCommand());
         AddCommand(new SubmissionsPackCommand());
         AddCommand(new SubmissionsListCommand());
+        AddCommand(new SubmissionsOpenCommand());
     }
 }
 

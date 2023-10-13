@@ -23,6 +23,9 @@ class Program
         rootCommand.AddCommand(new SubmissionsCommand());
         rootCommand.AddCommand(new HashCommand());
         rootCommand.AddCommand(new CsvCommand());
+        rootCommand.AddCommand(new FilesCommand());
+        rootCommand.AddCommand(new TestCommand());
+
 
         return await rootCommand.InvokeAsync(args);
     }

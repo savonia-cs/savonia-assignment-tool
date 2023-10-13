@@ -7,19 +7,27 @@ public class SubmissionsUnpackCommand : Command
 {
     public SubmissionsUnpackCommand() : base("unpack", "Unpack (unzip) all zip files in defined source folder. Creates a folder for each zip file where the contents are unpacked and overwrites possible existing files.")
     {
-        Add(CommonArguments.SourcePathArgument);
+        var charactersToRemoveOption = new Option<List<string>?>(
+            name: "--characters",
+            description: "A list of characters to remove from unpacked folder names. Use single characters (i.e. , . -) or strings (i.e. ae ab) to remove occurrences of those in the created folder name.",
+            getDefaultValue: () => new List<string> { "," })
+        {
+            AllowMultipleArgumentsPerToken = true
+        };
 
-        this.SetHandler(async (path, verbose) =>
+        Add(CommonArguments.SourcePathArgument);
+        Add(charactersToRemoveOption);
+
+        this.SetHandler(async (path, charactersToRemove, verbose) =>
             {
-                await Handle(path!, verbose);
+                await Handle(path!, charactersToRemove, verbose);
             },
-            CommonArguments.SourcePathArgument, GlobalOptions.VerboseOption);
+            CommonArguments.SourcePathArgument, charactersToRemoveOption, GlobalOptions.VerboseOption);
     }
 
-    async Task Handle(DirectoryInfo path,
-                                        bool verbose)
+    async Task Handle(DirectoryInfo path, List<string>? charactersToRemove, bool verbose)
     {
-
+        Directory.SetCurrentDirectory(path.FullName);
         var zipFiles = path.GetFiles().Where(f => f.Extension.Equals(".zip", StringComparison.InvariantCultureIgnoreCase));
         var zipFilesCount = zipFiles.Count();
         if (verbose)
@@ -44,7 +52,15 @@ public class SubmissionsUnpackCommand : Command
                         {
                             Console.WriteLine($"{counter++,4}: {file.Name}");
                         }
-                        zipArchive.ExtractToDirectory(file.FullName.Replace(file.Extension, ""), true);
+                        var folderName = file.Name.Replace(file.Extension, string.Empty);
+                        if (charactersToRemove != null && charactersToRemove.Any())
+                        {
+                            foreach (var character in charactersToRemove)
+                            {
+                                folderName = folderName.Replace(character, string.Empty);
+                            }
+                        }
+                        zipArchive.ExtractToDirectory(folderName, true);
                     }
                 }
                 catch (Exception ex)

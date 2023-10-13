@@ -29,19 +29,20 @@ public class HashOpenCommand : Command
             getDefaultValue: () => "-n");
 
         Add(CommonArguments.SourceCsvFileArgument);
+        Add(CommonArguments.SourcePathArgument);
         Add(HashCommand.HashIndexOption);
         Add(fileIndexOption);
         Add(editorOption);
         Add(editorParamsOption);
 
-        this.SetHandler(async (file, hashIndex, fileIndex, editor, editorParams, verbose) =>
+        this.SetHandler(async (file, workingDirectory, hashIndex, fileIndex, editor, editorParams, verbose) =>
             {
-                await Handle(file!, hashIndex, fileIndex, editor, editorParams, verbose);
+                await Handle(file!, workingDirectory, hashIndex, fileIndex, editor, editorParams, verbose);
             },
-            CommonArguments.SourceCsvFileArgument, HashCommand.HashIndexOption, fileIndexOption, editorOption, editorParamsOption, GlobalOptions.VerboseOption);        
+            CommonArguments.SourceCsvFileArgument, CommonArguments.SourcePathArgument, HashCommand.HashIndexOption, fileIndexOption, editorOption, editorParamsOption, GlobalOptions.VerboseOption);        
     }
 
-    async Task Handle(FileInfo file, int? hashIndex, int? fileIndex, string editor, string editorParams, bool verbose)
+    async Task Handle(FileInfo file, DirectoryInfo workingDirectory, int? hashIndex, int? fileIndex, string editor, string editorParams, bool verbose)
     {
         if (false == file.Exists)
         {
@@ -49,7 +50,7 @@ public class HashOpenCommand : Command
             return;
         }
 
-        Directory.SetCurrentDirectory(file.DirectoryName);
+        Directory.SetCurrentDirectory(workingDirectory.FullName);
 
         if (verbose)
         {

@@ -12,23 +12,21 @@ public class HashCompareCommand : Command
 {
     public HashCompareCommand() : base("compare", "Compare hashes from source file.")
     {
-        var csvOutputOption = new Option<string?>(
-            name: "--output",
-            description: "Output csv file. This will overwrite possible existing file. By default the output file is named the same as source file with \"-result.csv\" appended to the end.",
+        var csvOutputArgument = new Argument<string?>(
+            name: "compareOutput",
+            description: "Output csv file. This will overwrite possible existing file. By default the output file is named the same as source file with \"-compare-result.csv\" appended to the end.",
             getDefaultValue: () => null);
-        csvOutputOption.AddAlias("-o");
-
 
 
         Add(CommonArguments.SourceCsvFileArgument);
-        Add(csvOutputOption);
+        Add(csvOutputArgument);
         Add(HashCommand.HashIndexOption);
 
         this.SetHandler(async (input, output, hashIndex, verbose) =>
             {
-                await Handle(input!, output ?? $"{Path.GetFileNameWithoutExtension(input!.Name)}-result.csv", hashIndex, verbose);
+                await Handle(input!, output ?? $"{Path.GetFileNameWithoutExtension(input!.Name)}-compare-result.csv", hashIndex, verbose);
             },
-            CommonArguments.SourceCsvFileArgument, csvOutputOption, HashCommand.HashIndexOption, GlobalOptions.VerboseOption);
+            CommonArguments.SourceCsvFileArgument, csvOutputArgument, HashCommand.HashIndexOption, GlobalOptions.VerboseOption);
 
     }
 
