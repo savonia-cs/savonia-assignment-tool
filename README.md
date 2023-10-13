@@ -2,9 +2,18 @@
 
 This package contains a CLI tool (savoniatool) to help with programming assignments.
 
+> Version 1.3.* have major changes to some commands and their parameters that will prevent possible existing response files from working.
+>
+> Each command can be run with `-h` switch to see the command's help.
+
 The tool can be installed with command:
 ```dotnetcli
 dotnet tool install --global Savonia.Assignment.Tool
+```
+
+The tool can be uninstalled with command:
+```dotnetcli
+dotnet tool uninstall --global Savonia.Assignment.Tool
 ```
 
 Contains commands
@@ -12,12 +21,15 @@ Contains commands
 - `solution pack`: to create a zip package of your solution.
 - `submissions unpack`: to unpack (unzip) all answers. Typically each person's answer is in a zip file.
 - `submissions list`: to list all answer folders. The list has numbers to the folders and the numbers can be used to select individual or a range of folders to test.
-- `submissions test`: to run tests on the submissions.
+- `submissions test`: to perform various operations on the submissions.
 - `submissions pack`: to pack (zip) all answers. Packs each persons's answer folder individually to zip file.
+- `submissions open`: to open submissions one-by-one with an editor (by default with [VS Code](https://code.visualstudio.com/)) for manual evaluation
 - `hash create`: to create hash from selected file(s) in answers. Used to find duplicates.
 - `hash compare`: to find duplicates among the created hashes.
 - `hash open`: to open duplicates in an editor (by default VS Code) for manual checking.
-- `csv parse`: to parse a CSV file.
+- `csv parse`: to parse a CSV file with selected fields and possible Regex filters and output to another CSV file.
+
+Commands for submissions have been designed with C# related .NET projects (console apps, MAUI apps etc.) as primary target.
 
 ## Usage
 
@@ -68,14 +80,10 @@ This will read all .zip files in current directory and unzip them. Each .zip is 
 - To test all submissions
 
 ```dotnetcli
-savoniatool submissions test
+savoniatool submissions test run
 ```
 
-This is used to copy test harness to submission directories, run the tests and report the results.
-
-`submissions test` command has multiple mandatory options, check the tool's help for the options.
-
-Uses `dotnet test` command to run the tests and assumes that there is a solution file (*.sln) in each submissions directory with the test projects included in the solution file.
+This is used to run the tests and create a test run summary to each submission folder.
 
 ### To pack submissions
 
@@ -95,35 +103,24 @@ savoniatool submissions pack -o submissions.zip
 
 Defining value for option `--output` or `-o` will change the packing behavior to pack resulting files to a single zip file. The default values for `--includes` and `--excludes` are good for common usage scenario where all zip files in target directory (default is current directory) are to be packed to a single zip file.
 
-
 ### To create hash
 
 - To create hash from selected file(s) in answers
 
 ```dotnetcli
-savoniatool hash create -o hashes.csv --includes "**/*.cs"
+savoniatool hash create <path> hashes.csv --includes "**/*.cs"
 ```
 
 This will find all **.cs* files in all directories and creates a hash from the files. Code comments (line and block), white spaces, new lines and carriage returns are removed by default before creating the hash. Hashes are saved in the output file defined with option `-o` (or `--output`).
 
 `--filter-source-code` option uses flags arguments. Define multiple values with comma (,). E.g. `--filter-source-code whitespaces,newlines` to filter out white spaces and new lines. Set option `--filter-source-code none` to create hash from the file as is (without any filtering).
 
-### To check for duplicates
-
-- To check for duplicate hashes
-
-```dotnetcli
-savoniatool hash compare hashes.csv -o duplicates.csv
-```
-
-This will read hashes from source file `hashes.csv` and write duplicates to output file. By default hash values are read from the last column. Set `--hash-index` option with zero-based index for the hash column if it is not the last column. Define `-v` (or `--verbose`) to see the duplicates in terminal.
-
 ### To open duplicates in editor
 
 - To open duplicate source files in editor for manual checking
 
 ```dotnetcli
-savoniatool hash open duplicates.csv
+savoniatool hash open duplicates.csv <sourcePath>
 ```
 
 This will read hash groups (files that create the same hash value) from source file `duplicates.csv` and open the files with an editor. Uses VS Code as default editor to open the files and assumes that the editor is in PATH environment variable to allow opening from terminal. Reads filename from the first column and hash value from the last column. Define zero-based index values for options `--file-index` and `--hash-index` if first and last column assumptions are not valid for source file.
