@@ -168,7 +168,15 @@ public class SubmissionsTestSummaryCommand : Command
                         string feedback = testRunSummary.Feedback ?? string.Empty;
                         if (testRunSummary.SummaryItems.Any())
                         {
-                            feedback = $"{feedback} -  {string.Join(", ", testRunSummary.SummaryItems.Select(s => $"{s.TestName}: {s.Points}"))}";
+                            if (string.IsNullOrEmpty(feedback))
+                            {
+                                feedback = $"{string.Join(", ", testRunSummary.SummaryItems.Select(s => $"{s.TestName}: {s.Points}"))}";
+                            }
+                            else
+                            {
+                                feedback = $"{feedback} - {string.Join(", ", testRunSummary.SummaryItems.Select(s => $"{s.TestName}: {s.Points}"))}";
+                            }
+                            
                         }
                         csvWriter.WriteField(feedback);
 
@@ -184,15 +192,6 @@ public class SubmissionsTestSummaryCommand : Command
                                                     moodleFeedbackIdPrefix,
                                                     moodleFeedbackIdSuffix,
                                                     verbose);
-                            // FillPointsToMoodleCsv(moodleCsvContent, 
-                            //                         submission, 
-                            //                         moodleIdentifierRegex, 
-                            //                         moodleIdentifierPrefix, 
-                            //                         testRunSummary, 
-                            //                         moodleAppendIdToFeedback, 
-                            //                         moodleFeedbackIdPrefix, 
-                            //                         moodleFeedbackIdSuffix, 
-                            //                         verbose);
                         }
                     }
                 }
@@ -255,8 +254,6 @@ public class SubmissionsTestSummaryCommand : Command
         var moodleRow = moodleCsvContent.FirstOrDefault(r => r[moodleFieldIndexForId].Equals($"{moodlePrefix}{studentId}"));
         if (null != moodleRow)
         {
-            // moodleRow[moodleFieldIndexForGrade] = testRunSummary.Points.ToString();
-            // string feedback = string.Join(", ", testRunSummary.SummaryItems.Select(s => $"{s.TestName}: {s.Points}"));
             moodleRow[moodleFieldIndexForGrade] = points.ToString();
             if (moodleAppendIdToFeedback)
             {

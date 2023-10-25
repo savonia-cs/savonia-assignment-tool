@@ -60,8 +60,13 @@ public class SubmissionsTestRunCommand : Command
 
         var testSummaryFileOption = new Option<string>(
             name: "--test-summary-file",
-            description: "Test summary file name used to write test results JSON to each submission folder root. Will override possible existing file.",
+            description: "Test summary file name used to write test results JSON to each submission folder root. By default will overwrite possible existing file.",
             getDefaultValue: () => "testrunsummary.json");
+
+        var overwriteSummaryFileOption = new Option<bool>(
+            name: "--overwrite-summary-file",
+            description: "Overwrite possible existing test summary file. Defaults to true. If set to false, will preserve existing file and append new results to it. This may cause duplicate test results and points in the file.",
+            getDefaultValue: () => true);
 
         var selectedSubmissionsOption = new Option<List<string>?>(
             name: "--selected-submissions",
@@ -76,13 +81,14 @@ public class SubmissionsTestRunCommand : Command
         Add(testDataPrefixOption);
         Add(testLogFileOption);
         Add(testSummaryFileOption);
+        Add(overwriteSummaryFileOption);
         Add(selectedSubmissionsOption);
 
-        this.SetHandler(async (source, testsJsonFile, testDataPrefix, logFile, summaryFile, selectedSubmissions, verbose) =>
+        this.SetHandler(async (source, testsJsonFile, testDataPrefix, logFile, summaryFile, overwriteSummaryFile, selectedSubmissions, verbose) =>
         {
-            await Handle(source, testsJsonFile, testDataPrefix, logFile, summaryFile, selectedSubmissions, verbose);
+            await Handle(source, testsJsonFile, testDataPrefix, logFile, summaryFile, overwriteSummaryFile, selectedSubmissions, verbose);
         },
-        CommonArguments.SourcePathArgument, testsJsonArgument, testDataPrefixOption, testLogFileOption, testSummaryFileOption, selectedSubmissionsOption, GlobalOptions.VerboseOption);
+        CommonArguments.SourcePathArgument, testsJsonArgument, testDataPrefixOption, testLogFileOption, testSummaryFileOption, overwriteSummaryFileOption, selectedSubmissionsOption, GlobalOptions.VerboseOption);
 
     }
 
@@ -91,6 +97,7 @@ public class SubmissionsTestRunCommand : Command
                         string? testDataPrefix,
                         string logFile,
                         string summaryFile,
+                        bool overwriteSummaryFile,
                         List<string>? selectedSubmissions,
                         bool verbose)
     {
@@ -100,10 +107,10 @@ public class SubmissionsTestRunCommand : Command
 
         // run tests
         Directory.SetCurrentDirectory(path.FullName);
-        await RunTests(tests!, testDataPrefix, verbose, answerDirectories, logFile, summaryFile);
+        await RunTests(tests!, testDataPrefix, verbose, answerDirectories, logFile, summaryFile, overwriteSummaryFile);
     }
 
-    private async Task RunTests(GitHubClassroomTests tests, string? testDataPrefix, bool verbose, DirectoryInfo[] submissions, string logFile, string summaryFile)
+    private async Task RunTests(GitHubClassroomTests tests, string? testDataPrefix, bool verbose, DirectoryInfo[] submissions, string logFile, string summaryFile, bool overwriteSummaryFile)
     {
         // run tests on each answer directory
         bool testDataPrefixHasValue = false == string.IsNullOrEmpty(testDataPrefix);
@@ -124,7 +131,22 @@ public class SubmissionsTestRunCommand : Command
                 Console.WriteLine($"----");
                 Console.WriteLine($"{counter,4} {answerDir.Name}");
             }
-            TestRunSummary summary = new TestRunSummary()
+            FileInfo summaryFileInfo = new FileInfo(Path.Combine(answerDir.FullName, summaryFile));
+
+            TestRunSummary? summary = null;
+
+            if (false == overwriteSummaryFile)
+            {
+                if (summaryFileInfo.Exists)
+                {
+                    // read existing summary file
+                    using (var stream = summaryFileInfo.OpenRead())
+                    {
+                        summary = await System.Text.Json.JsonSerializer.DeserializeAsync<TestRunSummary>(stream);
+                    }
+                }
+            }
+            summary ??= new TestRunSummary()
             {
                 MaximumPoints = tests.Tests.Sum(t => t.Points) + (tests.Preparation?.Points ?? 0) + (tests.Cleanup?.Points ?? 0),
                 Assignment = answerDir.Parent?.Name,
@@ -140,7 +162,6 @@ public class SubmissionsTestRunCommand : Command
                 }
                 try
                 {
-                    // var preparationCommand = tests.Preparation.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                     ProcessStartInfo psi = new ProcessStartInfo(tests.Preparation.CommandName, tests.Preparation.Arguments ?? string.Empty);
                     psi.WorkingDirectory = answerDir.FullName;
                     psi.UseShellExecute = false;
@@ -156,7 +177,7 @@ public class SubmissionsTestRunCommand : Command
                         }
                         else
                         {
-                            Console.WriteLine($"\t-preparation command '{tests.Preparation}' on {answerDir.Name} exited with non-success code {p.ExitCode}");        
+                            Console.WriteLine($"\t-preparation command '{tests.Preparation}' on {answerDir.Name} exited with non-success code {p.ExitCode}");
                         }
                     }
                 }
@@ -207,7 +228,7 @@ public class SubmissionsTestRunCommand : Command
                 summary.SummaryItems.Add(summaryItem);
             }
             summary.Points += summary.SummaryItems.Sum(i => i.Points);
-            
+
             if (tests.Cleanup is not null)
             {
                 if (verbose)
@@ -216,7 +237,6 @@ public class SubmissionsTestRunCommand : Command
                 }
                 try
                 {
-                    // var cleanupCommand = tests.Cleanup.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                     ProcessStartInfo psi = new ProcessStartInfo(tests.Cleanup.CommandName, tests.Cleanup.Arguments ?? string.Empty);
                     psi.WorkingDirectory = answerDir.FullName;
                     psi.UseShellExecute = false;
@@ -232,7 +252,7 @@ public class SubmissionsTestRunCommand : Command
                         }
                         else
                         {
-                            Console.WriteLine($"\t-cleanup command '{tests.Cleanup}' on {answerDir.Name} exited with non-success code {p.ExitCode}");        
+                            Console.WriteLine($"\t-cleanup command '{tests.Cleanup}' on {answerDir.Name} exited with non-success code {p.ExitCode}");
                         }
                     }
                 }
@@ -243,7 +263,6 @@ public class SubmissionsTestRunCommand : Command
             }
 
             // write summary to file
-            FileInfo summaryFileInfo = new FileInfo(Path.Combine(answerDir.FullName, summaryFile));
             if (summaryFileInfo.Exists)
             {
                 summaryFileInfo.Delete();
@@ -294,7 +313,8 @@ public class SubmissionsTestRunCommand : Command
                 var errorInfo = output.ErrorInfo;
                 var message = errorInfo.Message as XmlNode[];
                 var stackTrace = errorInfo.StackTrace as XmlNode[];
-                summaryItem.Outputs.Add(new TestRunOutput {
+                summaryItem.Outputs.Add(new TestRunOutput
+                {
                     Info = $"{tr.TestName} - {tr.Outcome}",
                     Message = message.FirstOrDefault()?.InnerText,
                     StackTrace = stackTrace.FirstOrDefault()?.InnerText,
