@@ -2,7 +2,7 @@
 
 This package contains a CLI tool (savoniatool) to help with programming assignments.
 
-> Version 1.3.* have major changes to some commands and their parameters that will prevent possible existing response files from working.
+> Version 1.3.*+ have major changes to some commands and their parameters that will prevent possible existing response files from working.
 >
 > Each command can be run with `-h` switch to see the command's help.
 
