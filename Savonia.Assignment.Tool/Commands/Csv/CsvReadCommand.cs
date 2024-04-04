@@ -41,21 +41,7 @@ public class CsvReadCommand : Command
     async Task Handle(FileInfo input, string inputDelimiter, bool inputHasHeader, bool verbose)
     {
         Console.WriteLine($"Opening file {input.Name}");
-        List<List<string>> csvContent = new List<List<string>>();
-        using (var streamRdr = new StreamReader(input.OpenRead()))
-        {
-            var csvReader = new CsvReader(streamRdr, inputDelimiter);
-            while (csvReader.Read())
-            {
-                List<string> row = new List<string>(csvReader.FieldsCount);
-                for (int i = 0; i < csvReader.FieldsCount; i++)
-                {
-                    string val = csvReader[i];
-                    row.Add(val);
-                }
-                csvContent.Add(row);
-            }
-        }
+        var csvContent = input.ReadCsv(inputDelimiter);
         int counter = 1;
         foreach (var item in csvContent)
         {

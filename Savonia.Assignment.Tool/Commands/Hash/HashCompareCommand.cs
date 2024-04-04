@@ -43,7 +43,7 @@ public class HashCompareCommand : Command
         {
             Console.WriteLine($"Reading hashes from source \"{file.Name}\"");
         }
-        List<List<string>> data = await file.ReadCsv();
+        List<List<string>> data = file.ReadCsv();
         if (null == hashIndex && data.Any())
         {
             // assume that hash value is in the last column

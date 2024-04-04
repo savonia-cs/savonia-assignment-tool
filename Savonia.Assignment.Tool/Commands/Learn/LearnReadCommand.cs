@@ -24,8 +24,15 @@ public class LearnReadCommand : Command
             getDefaultValue: () => null);
         outputOption.AddAlias("-o");
 
+        var useKVPFormatOption = new Option<bool>(
+            name: "--key-value-pair",
+            description: "Write output as key-value-pair where the key is achievement id and value is achievement title. Default is false.",
+            getDefaultValue: () => false);
+        useKVPFormatOption.AddAlias("-k");
+
         Add(usernameArgument);
         AddOption(outputOption);
+        AddOption(useKVPFormatOption);
 
         this.SetHandler(async (context) =>
             {
@@ -33,12 +40,14 @@ public class LearnReadCommand : Command
                 string? output = context.ParseResult.GetValueForOption(outputOption);
 
                 await Handle(input, output,
-                                 context.ParseResult.GetValueForOption(GlobalOptions.VerboseOption));
+                                context.ParseResult.GetValueForOption(useKVPFormatOption),
+                                context.ParseResult.GetValueForOption(GlobalOptions.VerboseOption));
             });
     }
 
     async Task Handle(string username,
                         string? output,
+                        bool useKVPFormat,
                         bool verbose)
     {
         // set working directory
@@ -67,7 +76,21 @@ public class LearnReadCommand : Command
             {
                 File.Delete(output);
             }
-            await System.Text.Json.JsonSerializer.SerializeAsync(File.OpenWrite(output), achievements);
+            System.Text.Json.JsonSerializerOptions options = new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
+            };
+            using (var fs = File.OpenWrite(output))
+            {
+                if (useKVPFormat)
+                {
+                    await System.Text.Json.JsonSerializer.SerializeAsync(fs, achievements.Achievements.ToDictionary(a => a.TypeId, a => a.Title), options);
+                }
+                else
+                {
+                    await System.Text.Json.JsonSerializer.SerializeAsync(fs, achievements, options);
+                }
+            }
         }
         else
         {

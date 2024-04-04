@@ -19,6 +19,6 @@ public class UserProfile
     // public int followingCount { get; set; }
     // public int answersAccepted { get; set; }
     // public int reputationPoints { get; set; }
-    public DateTime CreatedOn { get; set; }
+    public string CreatedOn { get; set; }
 }
 

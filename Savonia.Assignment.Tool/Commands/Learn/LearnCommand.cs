@@ -9,6 +9,7 @@ public class LearnCommand : Command
     public LearnCommand() : base("learn", "Work with MS Learn content")
     {
         AddCommand(new LearnReadCommand());
+        AddCommand(new LearnCheckCommand());
        
     }
 }

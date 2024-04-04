@@ -17,8 +17,20 @@ public class MSLearnReader
     public async Task<UserProfile?> GetUserProfileAsync(string username)
     {
         var uri = string.Format(ProfileUriTemplate, username);
-        var response = await client.GetFromJsonAsync<UserProfile>(uri);
-        return response;
+        try 
+        {
+            var response = await client.GetFromJsonAsync<UserProfile>(uri);
+            return response;
+        }
+        catch (Exception e)
+        {
+            var defaultColor = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("\nException Caught!");
+            Console.WriteLine("Message :{0} ", e.Message);
+            Console.ForegroundColor = defaultColor;
+            return null;
+        }
     }
 
     public async Task<UserAchievements?> GetUserAchievementsAsync(string userId)

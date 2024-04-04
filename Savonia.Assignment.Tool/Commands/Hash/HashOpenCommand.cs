@@ -56,7 +56,7 @@ public class HashOpenCommand : Command
         {
             Console.WriteLine($"Opening hash groups from source \"{file.Name}\" with editor \"{editor}\"");
         }
-        List<List<string>> data = await file.ReadCsv();
+        List<List<string>> data = file.ReadCsv();
         if (null == hashIndex && data.Any())
         {
             // assume that hash value is in the last column
