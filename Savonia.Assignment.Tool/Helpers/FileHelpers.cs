@@ -1,5 +1,6 @@
 ﻿using System.Xml.Serialization;
 using VSTest;
+using NReco.Csv;
 
 namespace Savonia.Assignment.Tool.Helpers;
 
@@ -9,23 +10,49 @@ public static class FileHelpers
     /// Read csv file content and return as list of lists (rows[columns]).
     /// </summary>
     /// <param name="file"></param>
+    /// <param name="delimiter"></param>
     /// <returns></returns>
-    public static async Task<List<List<string>>> ReadCsv(this FileInfo file)
+    public static List<List<string>> ReadCsv(this FileInfo file, string delimiter = ",")
     {
-        List<List<string>> data = new List<List<string>>();
-        using (var fs = file.OpenRead())
-        using (StreamReader sr = new StreamReader(fs))
+        List<List<string>> csvContent = new List<List<string>>();
+        using (var streamRdr = new StreamReader(file.OpenRead()))
         {
-            string content = await sr.ReadToEndAsync();
-            content = content.Replace("\r", "");
-            var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-            foreach (var line in lines)
+            var csvReader = new CsvReader(streamRdr, delimiter);
+            while (csvReader.Read())
             {
-                var columns = line.Split(','); // TODO: handle cases where column content contains comma (,)
-                data.Add(columns.Select(c => c.Trim('"')).ToList());
+                List<string> row = new List<string>(csvReader.FieldsCount);
+                for (int i = 0; i < csvReader.FieldsCount; i++)
+                {
+                    string val = csvReader[i];
+                    row.Add(val);
+                }
+                csvContent.Add(row);
             }
         }
-        return data;
+        return csvContent;
+    }
+
+    /// <summary>
+    /// Write csv content to file.
+    /// </summary>
+    /// <param name="file"></param>
+    /// <param name="csvContent"></param>
+    /// <param name="delimiter"></param>
+    public static void WriteCsv(this string file, List<List<string>> csvContent, string delimiter = ",")
+    {
+        int columns = csvContent[0].Count;
+        using (var sw = new StreamWriter(File.OpenWrite(file)))
+        {
+            var csvWriter = new CsvWriter(sw, delimiter);
+            foreach (var row in csvContent)
+            {
+                for (int i = 0; i < columns; i++)
+                {
+                    csvWriter.WriteField(row[i]);
+                }
+                csvWriter.NextRecord();
+            }
+        }
     }
 
     /// <summary>
