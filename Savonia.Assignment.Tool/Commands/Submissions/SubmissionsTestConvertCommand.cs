@@ -1,18 +1,10 @@
 ﻿using System.CommandLine;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Xml;
 using Markdown2Pdf;
 using Markdown2Pdf.Options;
-using Microsoft.Extensions.FileSystemGlobbing;
-using NReco.Csv;
-using Savonia.Assignment.Tool.Helpers;
 using Savonia.Assignment.Tool.Models;
-using VSTest;
 
 namespace Savonia.Assignment.Tool.Commands.Submissions;
 
