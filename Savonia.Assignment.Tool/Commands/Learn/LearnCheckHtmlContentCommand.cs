@@ -11,14 +11,14 @@ using Savonia.Assignment.Tool.Commands.Learn.Models;
 
 namespace Savonia.Assignment.Tool.Commands.Learn;
 
-public class LearnCheckCommand : Command
+public class LearnCheckHtmlContentCommand : Command
 {
 
-    public LearnCheckCommand() : base("check", "Check that required achievements are completed for users.")
+    public LearnCheckHtmlContentCommand() : base("content", "Check that required content are found from a web resource.")
     {
         var requirementsArgument = new Argument<FileInfo>(
             name: "requirementsJsonFile",
-            description: "JSON file containing required achievements as JSON key-value-pairs where the key is achievements type id and value is achievement title.",
+            description: "JSON file containing the rules for the resource content.",
             parse: result =>
             {
                 if (result.Tokens.Count == 0)
@@ -44,6 +44,12 @@ public class LearnCheckCommand : Command
             getDefaultValue: () => null);
         outputOption.AddAlias("-o");
 
+        var resourcesOutputOption = new Option<string?>(
+            name: "--resources-output-folder",
+            description: "Folder for loaded resource files. Can be absolute or relative path. By default the resources are not saved.",
+            getDefaultValue: () => null);
+
+
         var inputCsvHasHeaderOption = new Option<bool>(
             name: "--input-has-header",
             description: "Set to true when the input CSV file has header row.",
@@ -54,14 +60,19 @@ public class LearnCheckCommand : Command
             description: "Delimiter for the input CSV file.",
             getDefaultValue: () => ",");
 
-        var usernameFieldOption = new Option<string>(
-            name: "--username-field",
-            description: "Field where the username is read. Use one-based (i.e. first field is one (1)) field number or field header to select. Defaults to field number 9 which is default field for Moodle LMS export file for assingment submissions text.",
+        var nameFieldOption = new Option<string>(
+            name: "--name-field",
+            description: "Field where the name is read. Use one-based (i.e. first field is one (1)) field number or field header to select. Defaults to field number 2 which is default field for Moodle LMS export file for name.",
+            getDefaultValue: () => "2");
+
+        var resourceFieldOption = new Option<string>(
+            name: "--resource-field",
+            description: "Field where the resource URL is read. Use one-based (i.e. first field is one (1)) field number or field header to select. Defaults to field number 9 which is default field for Moodle LMS export file for assignment submissions text.",
             getDefaultValue: () => "9");
 
         var gradeFieldOption = new Option<string>(
             name: "--grade-field",
-            description: "Field where the grade is written. Use one-based (i.e. first field is one (1)) field number or field header to select. Defaults to field number 5 which is default field for Moodle LMS export file for assingment grade.",
+            description: "Field where the grade is written. Use one-based (i.e. first field is one (1)) field number or field header to select. Defaults to field number 5 which is default field for Moodle LMS export file for assignment grade.",
             getDefaultValue: () => "5");
 
         var gradeOption = new Option<string>(
@@ -71,7 +82,7 @@ public class LearnCheckCommand : Command
 
         var commentsFieldOption = new Option<string>(
             name: "--comments-field",
-            description: "Field where the comments is written. Use one-based (i.e. first field is one (1)) field number or field header to select. Defaults to field number 11 which is default field for Moodle LMS export file for assingment feedback comments.",
+            description: "Field where the comments is written. Use one-based (i.e. first field is one (1)) field number or field header to select. Defaults to field number 11 which is default field for Moodle LMS export file for assignment feedback comments.",
             getDefaultValue: () => "11");
 
         var fieldFiltersOption = new Option<List<string>>(
@@ -108,9 +119,11 @@ public class LearnCheckCommand : Command
         Add(CommonArguments.SourceCsvFileArgument);
         Add(requirementsArgument);
         AddOption(outputOption);
+        AddOption(resourcesOutputOption);
         AddOption(inputCsvHasHeaderOption);
         AddOption(inputCsvDelimiterOption);
-        AddOption(usernameFieldOption);
+        AddOption(nameFieldOption);
+        AddOption(resourceFieldOption);
         AddOption(gradeFieldOption);
         AddOption(gradeOption);
         AddOption(commentsFieldOption);
@@ -124,9 +137,11 @@ public class LearnCheckCommand : Command
 
                 await Handle(input, output,
                                 context.ParseResult.GetValueForArgument(requirementsArgument)!,
+                                context.ParseResult.GetValueForOption(resourcesOutputOption),
                                 context.ParseResult.GetValueForOption(inputCsvDelimiterOption)!,
                                 context.ParseResult.GetValueForOption(inputCsvHasHeaderOption),
-                                context.ParseResult.GetValueForOption(usernameFieldOption)!,
+                                context.ParseResult.GetValueForOption(nameFieldOption)!,
+                                context.ParseResult.GetValueForOption(resourceFieldOption)!,
                                 context.ParseResult.GetValueForOption(gradeFieldOption)!,
                                 context.ParseResult.GetValueForOption(gradeOption)!,
                                 context.ParseResult.GetValueForOption(commentsFieldOption)!,
@@ -136,66 +151,88 @@ public class LearnCheckCommand : Command
             });
     }
 
-    async Task Handle(FileInfo input, string? output, FileInfo requirementsJsonFile,
+    async Task Handle(FileInfo input, string? output, 
+                        FileInfo requirementsJsonFile,
+                        string? resourcesOutputFolder,
                         string inputDelimiter, bool inputHasHeader,
-                        string usernameField, string gradeField, string grade, string commentsField,
+                        string nameField, string resourceField, string gradeField, string grade, string commentsField,
                         List<string> fieldFilters, FileInfo? regexes, bool verbose)
     {
         // set working directory
         Directory.SetCurrentDirectory(Path.GetDirectoryName(input.FullName)!);
+        bool writeResources = !string.IsNullOrEmpty(resourcesOutputFolder);
+        if (writeResources)
+        {
+            Directory.CreateDirectory(resourcesOutputFolder!);
+        }
 
-        Console.WriteLine($"Check achievements for users");
+        Console.WriteLine($"Check web content for users");
 
         var csvContent = input.ReadCsv(inputDelimiter);
         var headerRow = csvContent.GetHeaderRow(inputHasHeader);
-        var requirements = await System.Text.Json.JsonSerializer.DeserializeAsync<Dictionary<string, string>>(File.OpenRead(requirementsJsonFile.FullName));
+        var requirements = await System.Text.Json.JsonSerializer.DeserializeAsync<ContentRules>(File.OpenRead(requirementsJsonFile.FullName));
 
         List<List<string>> outputContent = new List<List<string>>(csvContent);
 
         await regexes.LoadRegexes();
         var fieldRegexes = fieldFilters.GetFieldRegexes(headerRow);
 
-        MSLearnReader reader = new MSLearnReader();
+        ContentRules rules = System.Text.Json.JsonSerializer.Deserialize<ContentRules>(File.OpenRead(requirementsJsonFile.FullName)
+                                    , new System.Text.Json.JsonSerializerOptions() { PropertyNameCaseInsensitive = true} )!;
+        if (rules is null)
+        {
+            var dc = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("Deserialization of requirements failed. Check the JSON file '{requirementsJsonFile.FullName}'.");
+            Console.ForegroundColor = dc;
+            return;
+        }
+        else
+        {
+            if (verbose)
+            {
+                Console.WriteLine($"Loaded {rules.StaticRules.Count} static and {rules.DynamicRules.Count} dynamic rules.");
+            }
+        }
 
-        int usernameFieldIndex = headerRow.GetFieldIndex(usernameField);
+        WebContentReader reader = new WebContentReader();
+
+        int nameFieldIndex = headerRow.GetFieldIndex(nameField);
+        int resourceFieldIndex = headerRow.GetFieldIndex(resourceField);
         int gradeFieldIndex = headerRow.GetFieldIndex(gradeField);
         int commentsFieldIndex = headerRow.GetFieldIndex(commentsField);
         int start = inputHasHeader ? 1 : 0;
         var defaultColor = Console.ForegroundColor;
         for (int i = start; i < csvContent.Count; i++)
         {
-            string username = csvContent[i][usernameFieldIndex].GetFieldValue(usernameFieldIndex, fieldRegexes).Trim();
-            if (string.IsNullOrEmpty(username))
+            string name = csvContent[i][nameFieldIndex].GetFieldValue(nameFieldIndex, fieldRegexes).Trim();
+            string resource = csvContent[i][resourceFieldIndex].GetFieldValue(resourceFieldIndex, fieldRegexes).Trim();
+            if (string.IsNullOrEmpty(resource))
             {
                 continue;
             }
-            var profile = await reader.GetUserProfileAsync(username);
-            if (null == profile)
+            var result = await reader.GetResourceAsync(resource);
+            if (null == result.content)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"\t- Profile for user {username} not found.");
+                Console.WriteLine($"\t- {name}: {resource} resulted in {result.code}, {result.reason}.");
                 Console.ForegroundColor = defaultColor;
-                outputContent[i][commentsFieldIndex] = "Profile not found";
+                outputContent[i][commentsFieldIndex] = $"Request for {resource} failed with {result.code}, {result.reason}.";
                 outputContent[i][gradeFieldIndex] = "0";
                 continue;
             }
-            var userAchiements = await reader.GetUserAchievementsAsync(profile.UserId);
-            if (null == userAchiements)
+            if (writeResources)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"\t- Achievements for user {username} not found.");
-                Console.ForegroundColor = defaultColor;
-                outputContent[i][commentsFieldIndex] = "Achievements not found";
-                outputContent[i][gradeFieldIndex] = "0";
-                continue;
+                string resourceFileName = Path.Combine(resourcesOutputFolder!, $"{name}.html");
+                File.WriteAllText(resourceFileName, result.content);
             }
-            var (allRequirementsMet, missingRequirements) = CheckRequirements(requirements!, userAchiements.Achievements);
+            var (allRequirementsMet, missingRequirements) = CheckRequirements(result.content, csvContent[i], headerRow, rules, verbose);
             if (allRequirementsMet)
             {
                 if (verbose)
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"\t- User {username} ({profile.DisplayName}) has all required achievements.");
+                    Console.WriteLine($"\t- User {name} has all required content.");
                     Console.ForegroundColor = defaultColor;
                 }
                 outputContent[i][gradeFieldIndex] = grade;
@@ -205,10 +242,10 @@ public class LearnCheckCommand : Command
                 if (verbose)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"\t- User {username} does not have all required achievements.");
+                    Console.WriteLine($"\t- User {name} does not have all required content.");
                     Console.ForegroundColor = defaultColor;
                 }
-                outputContent[i][commentsFieldIndex] = $"Missing: {string.Join(", ", missingRequirements.Select(m => $"{m.Value}"))}";
+                outputContent[i][commentsFieldIndex] = $"{string.Join(", ", missingRequirements.Select(m => $"{m.Value}"))}";
                 outputContent[i][gradeFieldIndex] = "0";
             }
         }
@@ -221,14 +258,27 @@ public class LearnCheckCommand : Command
         output!.WriteCsv(outputContent, inputDelimiter);
     }
 
-    private (bool allRequirementsMet, Dictionary<string, string> missingRequirements) CheckRequirements(Dictionary<string, string> requirements, Achievement[] achievements)
+    private (bool allRequirementsMet, Dictionary<string, string> missingRequirements) CheckRequirements(string content, List<string> userContent, List<string> headerRow, ContentRules rules, bool verbose)
     {
         Dictionary<string, string> missingRequirements = new Dictionary<string, string>();
-        foreach (var req in requirements)
+        foreach (var rule in rules.StaticRules)
         {
-            if (!achievements.Any(a => a.TypeId.Equals(req.Key, StringComparison.OrdinalIgnoreCase)))
+            if (!rule.CheckRule(content))
             {
-                missingRequirements.Add(req.Key, req.Value);
+                missingRequirements.Add(rule.Name, rule.FeedbackOnFail);
+            }
+        }
+        foreach (var rule in rules.DynamicRules)
+        {
+            var sourceFieldIndex = headerRow.GetFieldIndex(rule.SourceField);
+            var sourceValue = userContent[sourceFieldIndex];
+            if (verbose)
+            {
+                Console.WriteLine($"\t- Checking dynamic rule {rule.Name} with value {sourceValue}.");
+            }
+            if (!rule.CheckRule(content, sourceValue))
+            {
+                missingRequirements.Add(rule.Name, rule.FeedbackOnFail);
             }
         }
         return missingRequirements.Count == 0 ? (true, missingRequirements) : (false, missingRequirements);
