@@ -6,11 +6,12 @@ namespace Savonia.Assignment.Tool.Commands.Files;
 
 public class FilesCommand : Command
 {
-    public FilesCommand() : base("files", "Work with files and folders")
+    public FilesCommand() : base("files", "Work with files")
     {
         AddCommand(new FilesCopyCommand());
         AddCommand(new FilesPackCommand());
         AddCommand(new FilesUnpackCommand());
+        AddCommand(new FilesDeleteCommand());
     }
 }
 

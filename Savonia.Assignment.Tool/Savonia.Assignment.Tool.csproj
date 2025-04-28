@@ -3,10 +3,10 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
-    <Version>2.0.1</Version>
+    <Version>2.0.2</Version>
 		<Authors>Mikko Pääkkönen</Authors>
 		<Company>Savonia University of Applied Sciences</Company>
-		<Copyright>Mikko Pääkkönen 2024</Copyright>
+		<Copyright>Mikko Pääkkönen 2025</Copyright>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>savoniatool</ToolCommandName>
     <PackageOutputPath>./nupkg</PackageOutputPath>
@@ -16,13 +16,14 @@
 		<PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/savonia-cs/savonia-assignment-tool.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <IncludeSourceRevisionInInformationalVersion Condition=" '$(Configuration)' == 'Release' ">false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="9.0.4" />
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
     <PackageReference Include="NReco.Csv" Version="1.0.3" />
-    <PackageReference Include="Markdown2Pdf" Version="2.2.1" />
+    <PackageReference Include="Markdown2Pdf" Version="2.2.2" />
   </ItemGroup>
 
 	<ItemGroup>

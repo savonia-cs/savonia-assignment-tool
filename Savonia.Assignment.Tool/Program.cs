@@ -15,6 +15,7 @@ using Savonia.Assignment.Tool.Commands.Solution;
 using Savonia.Assignment.Tool.Commands.Submissions;
 using Savonia.Assignment.Tool.Commands.Test;
 using Savonia.Assignment.Tool.Commands.Learn;
+using Savonia.Assignment.Tool.Commands.Folders;
 
 namespace Savonia.Assignment.Tool;
 
@@ -30,6 +31,7 @@ class Program
         rootCommand.AddCommand(new HashCommand());
         rootCommand.AddCommand(new CsvCommand());
         rootCommand.AddCommand(new FilesCommand());
+        rootCommand.AddCommand(new FoldersCommand());
         rootCommand.AddCommand(new TestCommand());
         rootCommand.AddCommand(new LearnCommand());
 

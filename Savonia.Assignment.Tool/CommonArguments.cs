@@ -13,9 +13,14 @@ public static class CommonArguments
     public static readonly Argument<FileInfo?> SourceCsvFileArgument;
 
     /// <summary>
-    /// Source path to operate on.
+    /// Source path to operate on. Defaults to current working directory if no path is defined.
     /// </summary>
     public static readonly Argument<DirectoryInfo> SourcePathArgument;
+
+    /// <summary>
+    /// Source path to operate on. Defaults to empty if no path is defined (i.e. a value must be provided).
+    /// </summary>
+    public static readonly Argument<DirectoryInfo?> SourcePathRequiredArgument;
     static CommonArguments()
     {
         SourceCsvFileArgument = new Argument<FileInfo?>(
@@ -55,6 +60,29 @@ public static class CommonArguments
             }
         });
                         
+        // path default is current working directory if no path is defined
+        SourcePathRequiredArgument = new Argument<DirectoryInfo?>(
+            name: "sourcePath",
+            description: "Source path to operate on",
+            getDefaultValue: () => null);
+
+        SourcePathRequiredArgument.AddValidator(result =>
+        {
+            if (result.Tokens.Count == 0)
+            {
+                result.ErrorMessage = "Source path is not specified.";
+                return;
+            }
+            else
+            {
+                var path = result.GetValueForArgument(SourcePathRequiredArgument).FullName ?? string.Empty;
+                if (false == Directory.Exists(path))
+                {
+                    result.ErrorMessage = $"Source path '{path}' does not exist";
+                }
+            }
+        });
+
     }
 }
 
