@@ -16,44 +16,44 @@ public class SubmissionsTestCopyCommand : Command
     public SubmissionsTestCopyCommand() : base("copy", "Copy test harness or other assets to selected submissions.")
     {
 
-        var assetsPathArgument = new Argument<DirectoryInfo>(
-            name: "assetPath",
-            description: "Assets path from where to copy the files and folders to each submission folder."
-            );
-
-        assetsPathArgument.AddValidator(result =>
+        var assetsPathArgument = new Argument<DirectoryInfo>("assetPath")
         {
-            var path = result.GetValueForArgument(assetsPathArgument).FullName ?? string.Empty;
+            Description = "Assets path from where to copy the files and folders to each submission folder."
+        };
+
+        assetsPathArgument.Validators.Add(result =>
+        {
+            var path = result.GetValue(assetsPathArgument).FullName ?? string.Empty;
             if (false == Directory.Exists(path))
             {
-                result.ErrorMessage = $"Assets path '{path}' does not exist";
+                result.AddError($"Assets path '{path}' does not exist");
             }
         });
 
-        var submissionsPathArgument = new Argument<DirectoryInfo>(
-            name: "submissionPath",
-            description: "Path to submission directory where to copy the test harness to each submission folder.",
-            getDefaultValue: () => new DirectoryInfo(Directory.GetCurrentDirectory()));
-
-        submissionsPathArgument.AddValidator(result =>
+        var submissionsPathArgument = new Argument<DirectoryInfo>("submissionPath")
         {
-            var path = result.GetValueForArgument(submissionsPathArgument).FullName ?? string.Empty;
+            Description = "Path to submission directory where to copy the test harness to each submission folder.",
+            DefaultValueFactory = _ => new DirectoryInfo(Directory.GetCurrentDirectory())
+        };
+
+        submissionsPathArgument.Validators.Add(result =>
+        {
+            var path = result.GetValue(submissionsPathArgument).FullName ?? string.Empty;
             if (false == Directory.Exists(path))
             {
-                result.ErrorMessage = $"Submissions path '{path}' does not exist";
+                result.AddError($"Submissions path '{path}' does not exist");
             }
         });
 
-        var testHarnessTargetOption = new Option<string?>(
-            name: "--test-harness-target",
-            description: "Target directory in submissions folder to where the test harness is copied. Default is '' (i.e. the submission folder)."
-        );
-
-        var selectedSubmissionsOption = new Option<List<string>?>(
-            name: "--selected-submissions",
-            description: "Set index number of submission folders to run tests on. Use submissions list command to see the numbers. Use single number (i.e. 3 4 8) to select individual folders. Use dash (-) to select a range of folders (i.e. 1-10 14-16) or use dash with one number to select from start or to end (i.e. -10 15-). Leave empty to select all folders.",
-            getDefaultValue: () => new List<string> { })
+        var testHarnessTargetOption = new Option<string?>("--test-harness-target")
         {
+            Description = "Target directory in submissions folder to where the test harness is copied. Default is '' (i.e. the submission folder)."
+        };
+
+        var selectedSubmissionsOption = new Option<List<string>?>("--selected-submissions")
+        {
+            Description = "Set index number of submission folders to copy the test harness to. Use submissions list command to see the numbers. Use single number (i.e. 3 4 8) to select individual folders. Use dash (-) to select a range of folders (i.e. 1-10 14-16) or use dash with one number to select from start or to end (i.e. -10 15-). Leave empty to select all folders.",
+            DefaultValueFactory = parseResult => [],
             AllowMultipleArgumentsPerToken = true
         };
 
@@ -64,11 +64,16 @@ public class SubmissionsTestCopyCommand : Command
         Add(CommonOptions.IncludesOption);
         Add(selectedSubmissionsOption);
 
-        this.SetHandler(async (testHarnessPath, submissionsPath, testHarnessTarget, includes, excludes, selectedSubmissions, verbose) =>
+        this.SetAction(async parseResult =>
         {
-            await Handle(testHarnessPath, submissionsPath, testHarnessTarget, includes, excludes, selectedSubmissions, verbose);
-        },
-        assetsPathArgument, submissionsPathArgument, testHarnessTargetOption, CommonOptions.IncludesOption, CommonOptions.ExcludesOption, selectedSubmissionsOption, GlobalOptions.VerboseOption);
+            await Handle(parseResult.GetValue(assetsPathArgument)!,
+                            parseResult.GetValue(submissionsPathArgument)!,
+                            parseResult.GetValue(testHarnessTargetOption),
+                            parseResult.GetValue(CommonOptions.IncludesOption),
+                            parseResult.GetValue(CommonOptions.ExcludesOption),
+                            parseResult.GetValue(selectedSubmissionsOption),
+                            parseResult.GetValue(GlobalOptions.VerboseOption));
+        });
     }
 
     async Task Handle(DirectoryInfo testHarnessPath,

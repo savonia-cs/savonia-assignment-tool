@@ -16,53 +16,59 @@ public class SubmissionsTestConvertCommand : Command
 
     public SubmissionsTestConvertCommand() : base("convert", "Convert test run summaries in submission folders to md files.")
     {
-        var destinationPathArgument = new Argument<string?>(
-            name: "destinationPath",
-            description: "Destination path where to save to md files. Default value is the folder where the test run summary file is read.",
-            getDefaultValue: () => null);
-
-        var titleOption = new Option<string?>(
-            name: "--title",
-            description: "Title for the md file.",
-            getDefaultValue: () => "Test run summary");
-
-        var testSummaryFileOption = new Option<string>(
-            name: "--test-summary-file",
-            description: "Test summary file name to read each submission's test run summary from.",
-            getDefaultValue: () => "testrunsummary.json");
-
-        var selectedSubmissionsOption = new Option<List<string>?>(
-            name: "--selected-submissions",
-            description: "Set index number of submission folders to include in summary. Use 'submissions list' command to see the numbers. Use single number (i.e. 3 4 8) to select individual folders. Use dash (-) to select a range of folders (i.e. 1-10 14-16) or use dash with one number to select from start or to end (i.e. -10 15-). Leave empty to select all folders.",
-            getDefaultValue: () => new List<string> { })
+        var destinationPathArgument = new Argument<string?>("destinationPath")
         {
+            Description = "Destination path where to save to md files. Default value is the folder where the test run summary file is read.",
+            DefaultValueFactory = _ => null
+        };
+
+        var titleOption = new Option<string?>("--title")
+        {
+            Description = "Title for the md file.",
+            DefaultValueFactory = _ => "Test run summary"
+        };
+        var testSummaryFileOption = new Option<string>("--test-summary-file")
+        {
+            Description = "Test summary file name to read each submission's test run summary from.",
+            DefaultValueFactory = _ => "testrunsummary.json"
+        };
+
+        var selectedSubmissionsOption = new Option<List<string>?>("--selected-submissions")
+        {
+            Description = "Set index number of submission folders to include in summary. Use 'submissions list' command to see the numbers. Use single number (i.e. 3 4 8) to select individual folders. Use dash (-) to select a range of folders (i.e. 1-10 14-16) or use dash with one number to select from start or to end (i.e. -10 15-). Leave empty to select all folders.",
+            DefaultValueFactory = _ => [],
             AllowMultipleArgumentsPerToken = true
         };
 
-        var mdPrefixOption = new Option<string?>(
-            name: "--md-file-prefix",
-            description: "A prefix text to append to the created md file name.",
-            getDefaultValue: () => null);
+        var mdPrefixOption = new Option<string?>("--md-file-prefix")
+        {
+            Description = "A prefix text to append to the created md file name.",
+            DefaultValueFactory = _ => null
+        };
 
-        var mdRegexOption = new Option<string?>(
-            name: "--md-file-regex",
-            description: "A regex to get student identifier from submission folder name.",
-            getDefaultValue: () => "(?<=_)[0-9]+(?=_)");
+        var mdRegexOption = new Option<string?>("--md-file-regex")
+        {
+            Description = "A regex to get student identifier from submission folder name.",
+            DefaultValueFactory = _ => "(?<=_)[0-9]+(?=_)"
+        };
 
-        var mdSuffixOption = new Option<string?>(
-            name: "--md-file-suffix",
-            description: "A suffix text to append to the created md file name.",
-            getDefaultValue: () => null);
+        var mdSuffixOption = new Option<string?>("--md-file-suffix")
+        {
+            Description = "A suffix text to append to the created md file name.",
+            DefaultValueFactory = _ => null
+        };
 
-        var mdCreatePdfOption = new Option<bool>(
-            name: "--md-create-pdf",
-            description: "Create also a PDF file from created markdown content.",
-            getDefaultValue: () => false);
+        var mdCreatePdfOption = new Option<bool>("--md-create-pdf")
+        {
+            Description = "Create also a PDF file from created markdown content.",
+            DefaultValueFactory = _ => false
+        };
 
-        var mdCreatePdfKeepHtmlOption = new Option<bool>(
-            name: "--md-create-pdf-keep-html",
-            description: "When creating PDF files, keep the HTML file.",
-            getDefaultValue: () => false);
+        var mdCreatePdfKeepHtmlOption = new Option<bool>("--md-create-pdf-keep-html")
+        {
+            Description = "When creating PDF files, keep the HTML file.",
+            DefaultValueFactory = _ => false
+        };
 
 
         Add(CommonArguments.SourcePathArgument);
@@ -76,19 +82,19 @@ public class SubmissionsTestConvertCommand : Command
         Add(mdCreatePdfOption);
         Add(mdCreatePdfKeepHtmlOption);
 
-        this.SetHandler(async (context) =>
+        this.SetAction(async parseResult =>
             {
-                await Handle(context.ParseResult.GetValueForArgument(CommonArguments.SourcePathArgument)!,
-                                context.ParseResult.GetValueForArgument(destinationPathArgument),
-                                context.ParseResult.GetValueForOption(titleOption)!,
-                                 context.ParseResult.GetValueForOption(testSummaryFileOption)!,
-                                 context.ParseResult.GetValueForOption(selectedSubmissionsOption),
-                                 context.ParseResult.GetValueForOption(mdPrefixOption),
-                                 context.ParseResult.GetValueForOption(mdRegexOption),
-                                 context.ParseResult.GetValueForOption(mdSuffixOption),
-                                 context.ParseResult.GetValueForOption(mdCreatePdfOption),
-                                 context.ParseResult.GetValueForOption(mdCreatePdfKeepHtmlOption),
-                                 context.ParseResult.GetValueForOption(GlobalOptions.VerboseOption));
+                await Handle(parseResult.GetValue(CommonArguments.SourcePathArgument)!,
+                                parseResult.GetValue(destinationPathArgument),
+                                parseResult.GetValue(titleOption)!,
+                                parseResult.GetValue(testSummaryFileOption)!,
+                                parseResult.GetValue(selectedSubmissionsOption),
+                                parseResult.GetValue(mdPrefixOption),
+                                parseResult.GetValue(mdRegexOption),
+                                parseResult.GetValue(mdSuffixOption),
+                                parseResult.GetValue(mdCreatePdfOption),
+                                parseResult.GetValue(mdCreatePdfKeepHtmlOption),
+                                parseResult.GetValue(GlobalOptions.VerboseOption));
             });
     }
 

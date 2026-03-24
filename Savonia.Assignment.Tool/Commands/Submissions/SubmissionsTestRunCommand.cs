@@ -18,17 +18,17 @@ public class SubmissionsTestRunCommand : Command
 
     public SubmissionsTestRunCommand() : base("run", "Run tests for each selected submissions.")
     {
-        var testsJsonArgument = new Argument<FileInfo>(
-            name: "testsJsonFile",
-            description: "JSON file containing test definitions. Use GitHub Classroom autograding json file definition."
-            );
-
-        testsJsonArgument.AddValidator(result =>
+        var testsJsonArgument = new Argument<FileInfo>("testsJsonFile")
         {
-            var file = result.GetValueForArgument(testsJsonArgument).FullName ?? string.Empty;
+            Description = "JSON file containing test definitions. Use GitHub Classroom autograding json file definition."
+        };
+
+        testsJsonArgument.Validators.Add(result =>
+        {
+            var file = result.GetValue(testsJsonArgument).FullName ?? string.Empty;
             if (false == File.Exists(file))
             {
-                result.ErrorMessage = $"Tests JSON file '{file}' does not exist";
+                result.AddError($"Tests JSON file '{file}' does not exist");
             }
             else
             {
@@ -38,41 +38,44 @@ public class SubmissionsTestRunCommand : Command
                     var tests = JsonSerializer.Deserialize<GitHubClassroomTests>(json);
                     if (tests == null)
                     {
-                        result.ErrorMessage = $"Tests JSON file '{file}' is not valid GitHub Classroom autograding json file";
+                        result.AddError($"Tests JSON file '{file}' is not valid GitHub Classroom autograding json file");
                     }
                 }
                 catch (Exception ex)
                 {
-                    result.ErrorMessage = $"Tests JSON file '{file}' is not valid GitHub Classroom autograding json file";
+                    result.AddError($"Tests JSON file '{file}' is not valid GitHub Classroom autograding json file");
                 }
             }
         });
 
-        var testDataPrefixOption = new Option<string>(
-            name: "--test-data-prefix",
-            description: "Prefix to add to test data file names before reading the test data. Is used to run tests with different test data.",
-            getDefaultValue: () => "");
-
-        var testLogFileOption = new Option<string>(
-            name: "--test-log-file",
-            description: "Test log file name used to write and read test results. The file is relative to TestResults folder in each test directory.",
-            getDefaultValue: () => "savoniatool.trx");
-
-        var testSummaryFileOption = new Option<string>(
-            name: "--test-summary-file",
-            description: "Test summary file name used to write test results JSON to each submission folder root. By default will overwrite possible existing file.",
-            getDefaultValue: () => "testrunsummary.json");
-
-        var overwriteSummaryFileOption = new Option<bool>(
-            name: "--overwrite-summary-file",
-            description: "Overwrite possible existing test summary file. Defaults to true. If set to false, will preserve existing file and append new results to it. This may cause duplicate test results and points in the file.",
-            getDefaultValue: () => true);
-
-        var selectedSubmissionsOption = new Option<List<string>?>(
-            name: "--selected-submissions",
-            description: "Set index number of submission folders to run tests on. Use 'submissions list' command to see the numbers. Use single number (i.e. 3 4 8) to select individual folders. Use dash (-) to select a range of folders (i.e. 1-10 14-16) or use dash with one number to select from start or to end (i.e. -10 15-). Leave empty to select all folders.",
-            getDefaultValue: () => new List<string> { })
+        var testDataPrefixOption = new Option<string>("--test-data-prefix")
         {
+            Description = "Prefix to add to test data file names before reading the test data. Is used to run tests with different test data.",
+            DefaultValueFactory = _ => ""
+        };
+
+        var testLogFileOption = new Option<string>("--test-log-file")
+        {
+            Description = "Test log file name used to write and read test results. The file is relative to TestResults folder in each test directory.",
+            DefaultValueFactory = _ => "savoniatool.trx"
+        };
+
+        var testSummaryFileOption = new Option<string>("--test-summary-file")
+        {
+            Description = "Test summary file name used to write test results JSON to each submission folder root. By default will overwrite possible existing file.",
+            DefaultValueFactory = _ => "testrunsummary.json"
+        };
+
+        var overwriteSummaryFileOption = new Option<bool>("--overwrite-summary-file")
+        {
+            Description = "Overwrite possible existing test summary file. Defaults to true. If set to false, will preserve existing file and append new results to it. This may cause duplicate test results and points in the file.",
+            DefaultValueFactory = _ => true
+        };
+
+        var selectedSubmissionsOption = new Option<List<string>?>("--selected-submissions")
+        {
+            Description = "Set index number of submission folders to run tests on. Use 'submissions list' command to see the numbers. Use single number (i.e. 3 4 8) to select individual folders. Use dash (-) to select a range of folders (i.e. 1-10 14-16) or use dash with one number to select from start or to end (i.e. -10 15-). Leave empty to select all folders.",
+            DefaultValueFactory = _ => [],
             AllowMultipleArgumentsPerToken = true
         };
 
@@ -84,12 +87,19 @@ public class SubmissionsTestRunCommand : Command
         Add(overwriteSummaryFileOption);
         Add(selectedSubmissionsOption);
 
-        this.SetHandler(async (source, testsJsonFile, testDataPrefix, logFile, summaryFile, overwriteSummaryFile, selectedSubmissions, verbose) =>
+        this.SetAction(async (parseResult) =>
         {
-            await Handle(source, testsJsonFile, testDataPrefix, logFile, summaryFile, overwriteSummaryFile, selectedSubmissions, verbose);
-        },
-        CommonArguments.SourcePathArgument, testsJsonArgument, testDataPrefixOption, testLogFileOption, testSummaryFileOption, overwriteSummaryFileOption, selectedSubmissionsOption, GlobalOptions.VerboseOption);
-
+            await Handle(
+                parseResult.GetValue(CommonArguments.SourcePathArgument)!,
+                parseResult.GetValue(testsJsonArgument)!,
+                parseResult.GetValue(testDataPrefixOption),
+                parseResult.GetValue(testLogFileOption),
+                parseResult.GetValue(testSummaryFileOption),
+                parseResult.GetValue(overwriteSummaryFileOption),
+                parseResult.GetValue(selectedSubmissionsOption),
+                parseResult.GetValue(GlobalOptions.VerboseOption)
+            );
+        });
     }
 
     async Task Handle(DirectoryInfo path,

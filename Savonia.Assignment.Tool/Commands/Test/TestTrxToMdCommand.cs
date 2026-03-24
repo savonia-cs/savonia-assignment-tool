@@ -10,33 +10,33 @@ public class TestTrxToMdCommand : Command
 {
     public TestTrxToMdCommand() : base("trxtomd", "Converts a test result file (.trx) to a Markdown file (.md)")
     {
-        var sourceArgument = new Argument<FileInfo>(
-            name: "sourceTrxFile",
-            description: "Source trx file to convert"
-            );
-
-        sourceArgument.AddValidator(result =>
+        var sourceArgument = new Argument<FileInfo>("sourceTrxFile")
         {
-            var file = result.GetValueForArgument(sourceArgument).FullName ?? string.Empty;
+            Description = "Source trx file to convert"
+        };
+
+        sourceArgument.Validators.Add(result =>
+        {
+            var file = result.GetValue(sourceArgument).FullName ?? string.Empty;
             if (false == File.Exists(file))
             {
-                result.ErrorMessage = $"Source file '{file}' does not exist";
+                result.AddError($"Source file '{file}' does not exist");
             }
         });
 
-        var destinationArgument = new Argument<string?>(
-            name: "destinationMdFile",
-            description: "Destination file md file. Default value is the trx file name with .md extension in current folder.",
-            getDefaultValue: () => null);
+        var destinationArgument = new Argument<string?>("destinationMdFile")
+        {
+            Description = "Destination file md file. Default value is the trx file name with .md extension in current folder.",
+            DefaultValueFactory = _ => null
+        };
 
         Add(sourceArgument);
         Add(destinationArgument);
 
-        this.SetHandler(async (source, output, verbose) =>
+        this.SetAction(async parseResult =>
         {
-            await Handle(source!, output ?? $"{Path.GetFileNameWithoutExtension(source.Name)}.md", verbose);
-        },
-        sourceArgument, destinationArgument, GlobalOptions.VerboseOption);
+            await Handle(parseResult.GetValue(sourceArgument)!, parseResult.GetValue(destinationArgument) ?? $"{Path.GetFileNameWithoutExtension(parseResult.GetValue(sourceArgument)!.Name)}.md", parseResult.GetValue(GlobalOptions.VerboseOption));
+        });
     }
 
     async Task Handle(FileInfo source,

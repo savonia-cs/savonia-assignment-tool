@@ -15,21 +15,24 @@ public class FilesCopyCommand : Command
 
     public FilesCopyCommand() : base("copy", "Copy files and folders. Can be used to copy selected files and folder from a solution to a new location. Preserves folder structure.")
     {
-        Argument<DirectoryInfo> destinationPathArgument = new Argument<DirectoryInfo>(
-            name: "destinationPath",
-            description: "Destination path where to copy the files and folders. If the path does not exist it will be created."
-            );
+        Argument<DirectoryInfo> destinationPathArgument = new Argument<DirectoryInfo>("destinationPath")
+        {
+            Description = "Destination path where to copy the files and folders. If the path does not exist it will be created."
+        };
 
         Add(CommonArguments.SourcePathArgument);
         Add(destinationPathArgument);
         Add(CommonOptions.ExcludesOption);
         Add(CommonOptions.IncludesOption);
 
-        this.SetHandler(async (source, destination, includes, excludes, verbose) =>
+        this.SetAction(async (parseResult) =>
             {
-                await Handle(source, destination, includes, excludes, verbose);
-            },
-            CommonArguments.SourcePathArgument, destinationPathArgument, CommonOptions.IncludesOption, CommonOptions.ExcludesOption, GlobalOptions.VerboseOption);
+                await Handle(parseResult.GetValue(CommonArguments.SourcePathArgument)!,
+                                parseResult.GetValue(destinationPathArgument)!,
+                                parseResult.GetValue(CommonOptions.IncludesOption),
+                                parseResult.GetValue(CommonOptions.ExcludesOption),
+                                parseResult.GetValue(GlobalOptions.VerboseOption));
+            });
     }
 
     async Task Handle(DirectoryInfo source,

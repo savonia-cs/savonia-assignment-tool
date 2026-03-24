@@ -7,22 +7,24 @@ public class SubmissionsUnpackCommand : Command
 {
     public SubmissionsUnpackCommand() : base("unpack", "Unpack (unzip) all zip files in defined source folder. Creates a folder for each zip file where the contents are unpacked and overwrites possible existing files.")
     {
-        var charactersToRemoveOption = new Option<List<string>?>(
-            name: "--characters",
-            description: "A list of characters to remove from unpacked folder names. Use single characters (i.e. , . -) or strings (i.e. ae ab) to remove occurrences of those in the created folder name.",
-            getDefaultValue: () => new List<string> { "," })
+        var charactersToRemoveOption = new Option<List<string>?>("--characters")
         {
+            Description = "A list of characters to remove from unpacked folder names. Use single characters (i.e. , . -) or strings (i.e. ae ab) to remove occurrences of those in the created folder name.",
+            DefaultValueFactory = _ => new List<string> { "," },
             AllowMultipleArgumentsPerToken = true
         };
 
         Add(CommonArguments.SourcePathArgument);
         Add(charactersToRemoveOption);
 
-        this.SetHandler(async (path, charactersToRemove, verbose) =>
+        this.SetAction(async parseResult =>
             {
-                await Handle(path!, charactersToRemove, verbose);
-            },
-            CommonArguments.SourcePathArgument, charactersToRemoveOption, GlobalOptions.VerboseOption);
+                await Handle(
+                    parseResult.GetValue(CommonArguments.SourcePathArgument)!,
+                    parseResult.GetValue(charactersToRemoveOption),
+                    parseResult.GetValue(GlobalOptions.VerboseOption)
+                );
+            });
     }
 
     async Task Handle(DirectoryInfo path, List<string>? charactersToRemove, bool verbose)

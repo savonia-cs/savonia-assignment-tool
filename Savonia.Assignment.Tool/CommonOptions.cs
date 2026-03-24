@@ -26,13 +26,12 @@ public static class CommonOptions
 
     static CommonOptions()
     {
-        ExcludesOption = new Option<List<string>>(
-            name: "--excludes",
-            description: "Folders and files to exclude.",
-            getDefaultValue: () => new List<string> { })
-            {
-                AllowMultipleArgumentsPerToken = true
-            };
+        ExcludesOption = new Option<List<string>>("--excludes")
+        {
+            Description = "Folders and files to exclude.",
+            DefaultValueFactory = _ => [],
+            AllowMultipleArgumentsPerToken = true
+        };
 
         // by default include all files in all directories under the defined 'path'
         // more info: https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.filesystemglobbing.matcher?view=dotnet-plat-ext-7.0
@@ -47,13 +46,12 @@ public static class CommonOptions
         // B) --includes "**/*" 
         //      this will set value **/* to the includesOption values AND this will work on Linux as intended regardless of BASH globstar setting status
         // The default value set here in code will work as intended (to select all files in all directories) on all .NET supported OSes.
-        IncludesOption = new Option<List<string>>(
-            name: "--includes",
-            description: "Folders and files to include.",
-            getDefaultValue: () => new List<string> { "**/*" })
+        IncludesOption = new Option<List<string>>("--includes")
             {
-                AllowMultipleArgumentsPerToken = true
-            };
+            Description = "Folders and files to include.",
+            DefaultValueFactory = _ => ["**/*"],
+            AllowMultipleArgumentsPerToken = true
+        };
     }
 }
 

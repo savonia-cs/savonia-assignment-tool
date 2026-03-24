@@ -12,37 +12,43 @@ public class HashCreateCommand : Command
 {
     public HashCreateCommand() : base("create", "Create comparable hashes of code files in defined folder.")
     {
-        var csvOutputArgument = new Argument<string?>(
-            name: "hashesOutput",
-            description: "Output csv file. This will overwrite possible existing file. By default the csv file is named the same as the source folder name with \"-hashes.csv\" appended to the end.",
-            getDefaultValue: () => null);
+        var csvOutputArgument = new Argument<string?>("hashesOutput")
+        {
+            Description = "Output csv file. This will overwrite possible existing file. By default the csv file is named the same as the source folder name with \"-hashes.csv\" appended to the end.",
+            DefaultValueFactory = _ => null
+        };
 
         // regex filters for code comments in C#, see https://stackoverflow.com/a/3524689
-        var commentRegexFiltersOption = new Option<List<string>>(
-            name: "--regex-filters",
-            description: "Regex filters to find code comments.",
-            getDefaultValue: () => new List<string> { @"/\*(.*?)\*/", @"//(.*?)\r?\n", @"""((\\[^\n]|[^""\n])*)""", @"@(""[^""]*"")+" });
-        commentRegexFiltersOption.AllowMultipleArgumentsPerToken = true;
+        var commentRegexFiltersOption = new Option<List<string>>("--regex-filters")
+        {
+            Description = "Regex filters to find code comments.",
+            DefaultValueFactory = _ => new List<string> { @"/\*(.*?)\*/", @"//(.*?)\r?\n", @"""((\\[^\n]|[^""\n])*)""", @"@(""[^""]*"")+" },
+            AllowMultipleArgumentsPerToken = true
+        };
 
-        var startingLineCommentOption = new Option<string>(
-            name: "--starting-line-comment",
-            description: "Line comment start string",
-            getDefaultValue: () => "//");
+        var startingLineCommentOption = new Option<string>("--starting-line-comment")
+        {
+            Description = "Line comment start string",
+            DefaultValueFactory = _ => "//"
+        };
 
-        var startingBlockCommentOption = new Option<string>(
-            name: "--starting-block-comment",
-            description: "Block comment start string",
-            getDefaultValue: () => "/*");
+        var startingBlockCommentOption = new Option<string>("--starting-block-comment")
+        {
+            Description = "Block comment start string",
+            DefaultValueFactory = _ => "/*"
+        };
 
-        var filterSourceCodeOption = new Option<SourceCodeFilters>(
-            name: "--filter-source-code",
-            description: "Filter files before hashing.",
-            getDefaultValue: () => SourceCodeFilters.All);
+        var filterSourceCodeOption = new Option<SourceCodeFilters>("--filter-source-code")
+        {
+            Description = "Filter files before hashing.",
+            DefaultValueFactory = _ => SourceCodeFilters.All
+        };
 
-        var folderHashOption = new Option<bool>(
-            name: "--folder-hash",
-            description: "Combine selected files in folder to one hash.",
-            getDefaultValue: () => false);
+        var folderHashOption = new Option<bool>("--folder-hash")
+        {
+            Description = "Combine selected files in folder to one hash.",
+            DefaultValueFactory = _ => false
+        };
 
         Add(CommonArguments.SourcePathArgument);
         Add(csvOutputArgument);
@@ -54,20 +60,20 @@ public class HashCreateCommand : Command
         Add(filterSourceCodeOption);
         Add(folderHashOption);
 
-        this.SetHandler(async (context) =>
+        this.SetAction(async parseResult =>
             {
-                var folder = context.ParseResult.GetValueForArgument(CommonArguments.SourcePathArgument)!;
-                var output = context.ParseResult.GetValueForArgument(csvOutputArgument) ?? $"{folder.Name}-hashes.csv";
+                var folder = parseResult.GetValue(CommonArguments.SourcePathArgument)!;
+                var output = parseResult.GetValue(csvOutputArgument) ?? $"{folder.Name}-hashes.csv";
                 await Handle(folder,
                                 output,
-                                context.ParseResult.GetValueForOption(CommonOptions.IncludesOption)!,
-                                context.ParseResult.GetValueForOption(CommonOptions.ExcludesOption)!,
-                                context.ParseResult.GetValueForOption(commentRegexFiltersOption)!,
-                                context.ParseResult.GetValueForOption(startingBlockCommentOption)!,
-                                context.ParseResult.GetValueForOption(startingLineCommentOption)!,
-                                context.ParseResult.GetValueForOption(filterSourceCodeOption),
-                                context.ParseResult.GetValueForOption(folderHashOption),
-                                context.ParseResult.GetValueForOption(GlobalOptions.VerboseOption));
+                                parseResult.GetValue(CommonOptions.IncludesOption)!,
+                                parseResult.GetValue(CommonOptions.ExcludesOption)!,
+                                parseResult.GetValue(commentRegexFiltersOption)!,
+                                parseResult.GetValue(startingBlockCommentOption)!,
+                                parseResult.GetValue(startingLineCommentOption)!,
+                                parseResult.GetValue(filterSourceCodeOption),
+                                parseResult.GetValue(folderHashOption),
+                                parseResult.GetValue(GlobalOptions.VerboseOption));
             });            
     }
 

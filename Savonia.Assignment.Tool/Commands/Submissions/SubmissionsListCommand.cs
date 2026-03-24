@@ -11,11 +11,11 @@ public class SubmissionsListCommand : Command
     {
         Add(CommonArguments.SourcePathArgument);
 
-        this.SetHandler(async (path, verbose) =>
-            {
-                await Handle(path!, verbose);
-            },
-            CommonArguments.SourcePathArgument, GlobalOptions.VerboseOption);
+        this.SetAction(async parseResult =>
+        {
+            var path = parseResult.GetRequiredValue<DirectoryInfo>(CommonArguments.SourcePathArgument)!;
+            await Handle(path, parseResult.GetValue(GlobalOptions.VerboseOption));
+        });
     }
 
     async Task Handle(DirectoryInfo path, bool verbose)
@@ -24,7 +24,7 @@ public class SubmissionsListCommand : Command
         var answerDirectories = path.GetDirectories().OrderBy(d => d.Name).ToArray();
         for (int i = 0; i < answerDirectories.Length; i++)
         {
-            Console.WriteLine($"{i + 1, 4}. {answerDirectories[i].Name}");
+            Console.WriteLine($"{i + 1,4}. {answerDirectories[i].Name}");
         }
     }
 }

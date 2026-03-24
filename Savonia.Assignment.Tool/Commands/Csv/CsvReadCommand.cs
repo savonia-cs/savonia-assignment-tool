@@ -13,28 +13,30 @@ public class CsvReadCommand : Command
 {
     public CsvReadCommand() : base("read", "Read a CSV file and write content to terminal.")
     {
-        this.IsHidden = true;
+        this.Hidden = true;
 
-        var inputCsvHasHeaderOption = new Option<bool>(
-            name: "--input-has-header",
-            description: "Set to true when the input CSV file has header row.",
-            getDefaultValue: () => true);
+        var inputCsvHasHeaderOption = new Option<bool>("--input-has-header")
+        {
+            Description = "Set to true when the input CSV file has header row.",
+            DefaultValueFactory = _ => true
+        };
 
-        var inputCsvDelimiterOption = new Option<string>(
-            name: "--input-delimiter",
-            description: "Delimiter for the input CSV file.",
-            getDefaultValue: () => ",");
+        var inputCsvDelimiterOption = new Option<string>("--input-delimiter")
+        {
+            Description = "Delimiter for the input CSV file.",
+            DefaultValueFactory = _ => ","
+        };
 
         Add(CommonArguments.SourceCsvFileArgument);
-        AddOption(inputCsvHasHeaderOption);
-        AddOption(inputCsvDelimiterOption);
+        Add(inputCsvHasHeaderOption);
+        Add(inputCsvDelimiterOption);
 
-        this.SetHandler(async (context) =>
+        this.SetAction(async parseResult =>
             {
-                await Handle(context.ParseResult.GetValueForArgument(CommonArguments.SourceCsvFileArgument)!,
-                                context.ParseResult.GetValueForOption(inputCsvDelimiterOption)!,
-                                context.ParseResult.GetValueForOption(inputCsvHasHeaderOption),
-                                context.ParseResult.GetValueForOption(GlobalOptions.VerboseOption));
+                await Handle(parseResult.GetValue(CommonArguments.SourceCsvFileArgument)!,
+                                parseResult.GetValue(inputCsvDelimiterOption)!,
+                                parseResult.GetValue(inputCsvHasHeaderOption),
+                                parseResult.GetValue(GlobalOptions.VerboseOption));
             });
     }
 

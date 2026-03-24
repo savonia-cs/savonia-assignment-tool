@@ -12,22 +12,24 @@ public class HashCompareCommand : Command
 {
     public HashCompareCommand() : base("compare", "Compare hashes from source file.")
     {
-        var csvOutputArgument = new Argument<string?>(
-            name: "compareOutput",
-            description: "Output csv file. This will overwrite possible existing file. By default the output file is named the same as source file with \"-compare-result.csv\" appended to the end.",
-            getDefaultValue: () => null);
+        var csvOutputArgument = new Argument<string?>("compareOutput")
+        {
+            Description = "Output csv file. This will overwrite possible existing file. By default the output file is named the same as source file with \"-compare-result.csv\" appended to the end.",
+            DefaultValueFactory = _ => null
+        };
 
 
         Add(CommonArguments.SourceCsvFileArgument);
         Add(csvOutputArgument);
         Add(HashCommand.HashIndexOption);
 
-        this.SetHandler(async (input, output, hashIndex, verbose) =>
-            {
-                await Handle(input!, output ?? $"{Path.GetFileNameWithoutExtension(input!.Name)}-compare-result.csv", hashIndex, verbose);
-            },
-            CommonArguments.SourceCsvFileArgument, csvOutputArgument, HashCommand.HashIndexOption, GlobalOptions.VerboseOption);
-
+        this.SetAction(async (parseResult) =>
+        {
+            await Handle(parseResult.GetValue(CommonArguments.SourceCsvFileArgument)!,
+                            parseResult.GetValue(csvOutputArgument) ?? $"{Path.GetFileNameWithoutExtension(parseResult.GetValue(CommonArguments.SourceCsvFileArgument)!.Name)}-compare-result.csv",
+                            parseResult.GetValue(HashCommand.HashIndexOption),
+                            parseResult.GetValue(GlobalOptions.VerboseOption));
+        });
     }
 
     async Task Handle(FileInfo file, string output, int? hashIndex, bool verbose)

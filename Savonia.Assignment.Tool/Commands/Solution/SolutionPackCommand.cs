@@ -8,22 +8,21 @@ public class SolutionPackCommand : Command
 {
     public SolutionPackCommand() : base("pack", "Pack your solution to a zip file.")
     {
-        var zipOutputOption = new Option<string?>(
-            name: "--output",
-            description: "Output zip file. This will overwrite possible existing file. By default the zip file is named the same as the source folder name.",
-            getDefaultValue: () => null);
-        zipOutputOption.AddAlias("-o");
+        var zipOutputOption = new Option<string?>("--output", ["-o"])
+        {
+            Description = "Output zip file. This will overwrite possible existing file. By default the zip file is named the same as the source folder name.",
+            DefaultValueFactory = _ => null
+        };
 
         Add(CommonArguments.SourcePathArgument);
         Add(zipOutputOption);
         Add(CommonOptions.ExcludesOption);
         Add(CommonOptions.IncludesOption);
 
-        this.SetHandler(async (source, output, includes, excludes, verbose) =>
+        this.SetAction(async parseResult =>
         {
-            await Handle(source!, output ?? $"{source.Name}.zip", includes, excludes, verbose);
-        },
-        CommonArguments.SourcePathArgument, zipOutputOption, CommonOptions.IncludesOption, CommonOptions.ExcludesOption, GlobalOptions.VerboseOption);
+            await Handle(parseResult.GetValue(CommonArguments.SourcePathArgument)!, parseResult.GetValue(zipOutputOption) ?? $"{parseResult.GetValue(CommonArguments.SourcePathArgument)!.Name}.zip", parseResult.GetValue(CommonOptions.IncludesOption), parseResult.GetValue(CommonOptions.ExcludesOption), parseResult.GetValue(GlobalOptions.VerboseOption));
+        });
     }
 
     async Task Handle(DirectoryInfo path,

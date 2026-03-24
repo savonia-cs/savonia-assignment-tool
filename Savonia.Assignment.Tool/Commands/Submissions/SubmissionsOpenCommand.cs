@@ -17,33 +17,36 @@ public class SubmissionsOpenCommand : Command
 
     public SubmissionsOpenCommand() : base("open", "Open each submission in defined submissions folder one by one. Proceeds to the next submission when the editor is closed.")
     {
-        var selectedSubmissionsOption = new Option<List<string>?>(
-            name: "--selected-submissions",
-            description: "Set index number of submission folders to run tests on. Use submissions list command to see the numbers. Use single number (i.e. 3 4 8) to select individual folders. Use dash (-) to select a range of folders (i.e. 1-10 14-16) or use dash with one number to select from start or to end (i.e. -10 15-). Leave empty to select all folders.",
-            getDefaultValue: () => new List<string> { })
+        var selectedSubmissionsOption = new Option<List<string>?>("--selected-submissions")
         {
+            Description = "Set index number of submission folders to run tests on. Use submissions list command to see the numbers. Use single number (i.e. 3 4 8) to select individual folders. Use dash (-) to select a range of folders (i.e. 1-10 14-16) or use dash with one number to select from start or to end (i.e. -10 15-). Leave empty to select all folders.",
+            DefaultValueFactory = parseResult => [],
             AllowMultipleArgumentsPerToken = true
         };
 
-        var openOnlyUnhandledOption = new Option<bool>(
-            name: "--unhandled-only",
-            description: "Open only submission within selected submissions that are not marked as handled. Set to 'false' to open all selected submissions.",
-            getDefaultValue: () => true);
+        var openOnlyUnhandledOption = new Option<bool>("--unhandled-only")
+        {
+            Description = "Open only submission within selected submissions that are not marked as handled. Set to 'false' to open all selected submissions.",
+            DefaultValueFactory = parseResult => true
+        };
 
-        var markAsHandledOption = new Option<bool>(
-            name: "--mark-handled",
-            description: "Mark submissions as handled when moving to next submissions.",
-            getDefaultValue: () => true);
+        var markAsHandledOption = new Option<bool>("--mark-handled")
+        {
+            Description = "Mark submissions as handled when moving to next submissions.",
+            DefaultValueFactory = parseResult => true
+        };
 
-        var editorOption = new Option<string>(
-            name: "--editor",
-            description: "Editor executable name. The executable should be in the PATH environment variable.",
-            getDefaultValue: () => "code");
+        var editorOption = new Option<string>("--editor")
+        {
+            Description = "Editor executable name. The executable should be in the PATH environment variable.",
+            DefaultValueFactory = parseResult => "code"
+        };
 
-        var editorParamsOption = new Option<string>(
-            name: "--editor-params",
-            description: "Parameters for the editor executable.",
-            getDefaultValue: () => "-n -w");
+        var editorParamsOption = new Option<string>("--editor-params")
+        {
+            Description = "Parameters for the editor executable.",
+            DefaultValueFactory = parseResult => "-n -w"
+        };
 
         Add(CommonArguments.SourcePathArgument);
         Add(openOnlyUnhandledOption);
@@ -52,13 +55,17 @@ public class SubmissionsOpenCommand : Command
         Add(editorParamsOption);
         Add(editorOption);
 
-        this.SetHandler(async (path, selectedSubmissions, unhandledOnly, markHandled, editor, editorParams, verbose) =>
+        this.SetAction(async parseResult =>
         {
-            await Handle(path, selectedSubmissions, unhandledOnly, markHandled, editor, editorParams, verbose);
-        },
-        CommonArguments.SourcePathArgument, selectedSubmissionsOption, openOnlyUnhandledOption, markAsHandledOption, editorOption, editorParamsOption, GlobalOptions.VerboseOption);
+            await Handle(parseResult.GetValue(CommonArguments.SourcePathArgument)!,
+                         parseResult.GetValue(selectedSubmissionsOption),
+                         parseResult.GetValue(openOnlyUnhandledOption),
+                         parseResult.GetValue(markAsHandledOption),
+                         parseResult.GetValue(editorOption)!,
+                         parseResult.GetValue(editorParamsOption)!,
+                         parseResult.GetValue(GlobalOptions.VerboseOption));
+        });
     }
-
     async Task Handle(DirectoryInfo path,
                         List<string>? selectedSubmissions,
                         bool unhandledOnly,

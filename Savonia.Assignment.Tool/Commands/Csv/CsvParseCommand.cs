@@ -14,89 +14,87 @@ public class CsvParseCommand : Command
 {
     public CsvParseCommand() : base("parse", "Parse a CSV file with selected fields and possible Regex filters and output to another CSV file.")
     {
-        var inputCsvHasHeaderOption = new Option<bool>(
-            name: "--input-has-header",
-            description: "Set to true when the input CSV file has header row.",
-            getDefaultValue: () => true);
+        var inputCsvHasHeaderOption = new Option<bool>("--input-has-header")
+        {
+            Description = "Set to true when the input CSV file has header row.",
+            DefaultValueFactory = _ => true
+        };
 
-        var inputCsvDelimiterOption = new Option<string>(
-            name: "--input-delimiter",
-            description: "Delimiter for the input CSV file.",
-            getDefaultValue: () => ",");
+        var inputCsvDelimiterOption = new Option<string>("--input-delimiter")
+        {
+            Description = "Delimiter for the input CSV file.",
+            DefaultValueFactory = _ => ","
+        };
 
-        var outputCsvDelimiterOption = new Option<string>(
-            name: "--output-delimiter",
-            description: "Delimiter for the output CSV file.",
-            getDefaultValue: () => ",");
+        var outputCsvDelimiterOption = new Option<string>("--output-delimiter")
+        {
+            Description = "Delimiter for the output CSV file.",
+            DefaultValueFactory = _ => ","
+        };
 
-        var csvOutputOption = new Option<string?>(
-            name: "--output",
-            description: "Output csv file. This will overwrite possible existing file. By default the output file is named the same as source file with \"-result.csv\" appended to the end.",
-            getDefaultValue: () => null);
-        csvOutputOption.AddAlias("-o");
+        var csvOutputOption = new Option<string?>("--output", ["-o"])
+        {
+            Description = "Output csv file. This will overwrite possible existing file. By default the output file is named the same as source file with \"-result.csv\" appended to the end.",
+            DefaultValueFactory = _ => null
+        };
 
-        var regexInputOption = new Option<FileInfo?>(
-            name: "--regexes",
-            description: "A JSON file containing key-value pair (a dictionary) of regexes to filter/parse CSV column values. Key is the regex \"name\" and value is the regex \"pattern\".",
-            isDefault: true,
-            parseArgument: result =>
-            {
+        var regexInputOption = new Option<FileInfo?>("--regexes")
+        {
+            Description = "A JSON file containing key-value pair (a dictionary) of regexes to filter/parse CSV column values. Key is the regex \"name\" and value is the regex \"pattern\".",
+            DefaultValueFactory = _ => null,
+        };
+        regexInputOption.Validators.Add(result =>
+        {
                 if (result.Tokens.Count == 0)
                 {
                     // no regexes defined
-                    return null;
+                    return;
                 }
                 string? filePath = result.Tokens.Single().Value;
                 if (!File.Exists(filePath))
                 {
-                    result.ErrorMessage = "Regexes JSON file does not exist";
-                    return null;
+                    result.AddError("Regexes JSON file does not exist");
+                    return;
                 }
-                else
-                {
-                    return new FileInfo(filePath);
-                }
-            });
+        });
 
-        var selectedFieldsOption = new Option<List<string>>(
-            name: "--fields",
-            description: "Fields to select from the input CSV file to be written to output CSV file. Use one-based (i.e. first field is one (1)) field number or field header to select. Leave to empty to select all fields.",
-            getDefaultValue: () => new List<string>())
+        var selectedFieldsOption = new Option<List<string>>("--fields")
         {
+            Description = "Fields to select from the input CSV file to be written to output CSV file. Use one-based (i.e. first field is one (1)) field number or field header to select. Leave to empty to select all fields.",
+            DefaultValueFactory = _ => [], 
             AllowMultipleArgumentsPerToken = true
         };
 
-        var fieldFiltersOption = new Option<List<string>>(
-            name: "--field-filters",
-            description: "Field regex filter. Set in pairs where first value is field number or name and the second is the regex (e.g. --field-filters 3 \\d+ to select first numbers from field 3). Use predefined regex filter values: URL to filter urls or regex name(s) defined in --regexes option. Leave to empty to select field data as is.",
-            getDefaultValue: () => new List<string>())
+        var fieldFiltersOption = new Option<List<string>>("--field-filters")
         {
+            Description = "Field regex filter. Set in pairs where first value is field number or name and the second is the regex (e.g. --field-filters 3 \\d+ to select first numbers from field 3). Use predefined regex filter values: URL to filter urls or regex name(s) defined in --regexes option. Leave to empty to select field data as is.",
+            DefaultValueFactory = _ => [],
             AllowMultipleArgumentsPerToken = true
         };
 
         Add(CommonArguments.SourceCsvFileArgument);
-        AddOption(inputCsvDelimiterOption);
-        AddOption(outputCsvDelimiterOption);
-        AddOption(inputCsvHasHeaderOption);
-        AddOption(csvOutputOption);
-        AddOption(selectedFieldsOption);
-        AddOption(fieldFiltersOption);
-        AddOption(regexInputOption);
+        Add(inputCsvDelimiterOption);
+        Add(outputCsvDelimiterOption);
+        Add(inputCsvHasHeaderOption);
+        Add(csvOutputOption);
+        Add(selectedFieldsOption);
+        Add(fieldFiltersOption);
+        Add(regexInputOption);
 
-        this.SetHandler(async (context) =>
+        this.SetAction(async parseResult =>
             {
-                FileInfo input = context.ParseResult.GetValueForArgument(CommonArguments.SourceCsvFileArgument)!;
-                string output = context.ParseResult.GetValueForOption(csvOutputOption) ?? $"{Path.GetFileNameWithoutExtension(input.Name)}-result.csv";
+                FileInfo input = parseResult.GetValue(CommonArguments.SourceCsvFileArgument)!;
+                string output = parseResult.GetValue(csvOutputOption) ?? $"{Path.GetFileNameWithoutExtension(input.Name)}-result.csv";
 
                 await Handle(output,
                                  input,
-                                 context.ParseResult.GetValueForOption(inputCsvDelimiterOption),
-                                 context.ParseResult.GetValueForOption(outputCsvDelimiterOption),
-                                 context.ParseResult.GetValueForOption(inputCsvHasHeaderOption),
-                                 context.ParseResult.GetValueForOption(selectedFieldsOption),
-                                 context.ParseResult.GetValueForOption(fieldFiltersOption),
-                                 context.ParseResult.GetValueForOption(regexInputOption),
-                                 context.ParseResult.GetValueForOption(GlobalOptions.VerboseOption));
+                                 parseResult.GetValue(inputCsvDelimiterOption),
+                                 parseResult.GetValue(outputCsvDelimiterOption),
+                                 parseResult.GetValue(inputCsvHasHeaderOption),
+                                 parseResult.GetValue(selectedFieldsOption),
+                                 parseResult.GetValue(fieldFiltersOption),
+                                 parseResult.GetValue(regexInputOption),
+                                 parseResult.GetValue(GlobalOptions.VerboseOption));
             });
     }
 

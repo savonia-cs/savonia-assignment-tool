@@ -8,10 +8,10 @@ public class FilesCommand : Command
 {
     public FilesCommand() : base("files", "Work with files")
     {
-        AddCommand(new FilesCopyCommand());
-        AddCommand(new FilesPackCommand());
-        AddCommand(new FilesUnpackCommand());
-        AddCommand(new FilesDeleteCommand());
+        Add(new FilesCopyCommand());
+        Add(new FilesPackCommand());
+        Add(new FilesUnpackCommand());
+        Add(new FilesDeleteCommand());
     }
 }
 

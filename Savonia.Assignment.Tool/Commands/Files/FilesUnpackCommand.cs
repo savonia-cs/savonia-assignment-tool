@@ -15,33 +15,35 @@ public class FilesUnpackCommand : Command
 
     public FilesUnpackCommand() : base("unpack", "Unpack files and folders from a zip package. Preserves folder structure.")
     {
-        var sourceArgument = new Argument<FileInfo>(
-            name: "sourceZipFile",
-            description: "Source zip file to unpack"
-            );
-
-        sourceArgument.AddValidator(result =>
+        var sourceArgument = new Argument<FileInfo>("sourceZipFile")
         {
-            var file = result.GetValueForArgument(sourceArgument).FullName ?? string.Empty;
+            Description = "Source zip file to unpack"
+        };
+
+        sourceArgument.Validators.Add(result =>
+        {
+            var file = result.GetValue(sourceArgument).FullName ?? string.Empty;
             if (false == File.Exists(file))
             {
-                result.ErrorMessage = $"Source file '{file}' does not exist";
+                result.AddError($"Source file '{file}' does not exist");
             }
         });
 
-        var destinationPathArgument = new Argument<string?>(
-            name: "destinationPath",
-            description: "Destination path to unpack the zip file. Default value is the zip file name without extension in current folder.",
-            getDefaultValue: () => null);
+        var destinationPathArgument = new Argument<string?>("destinationPath")
+        {
+            Description = "Destination path to unpack the zip file. Default value is the zip file name without extension in current folder.",
+            DefaultValueFactory = _ => null
+        };
 
         Add(sourceArgument);
         Add(destinationPathArgument);
 
-        this.SetHandler(async (source, output, verbose) =>
+        this.SetAction(async (parseResult) =>
         {
-            await Handle(source!, output ?? Path.GetFileNameWithoutExtension(source.Name), verbose);
-        },
-        sourceArgument, destinationPathArgument, GlobalOptions.VerboseOption);
+            await Handle(parseResult.GetValue(sourceArgument)!,
+                            parseResult.GetValue(destinationPathArgument) ?? Path.GetFileNameWithoutExtension(parseResult.GetValue(sourceArgument)!.Name),
+                            parseResult.GetValue(GlobalOptions.VerboseOption));
+        });
     }
 
     async Task Handle(FileInfo source,

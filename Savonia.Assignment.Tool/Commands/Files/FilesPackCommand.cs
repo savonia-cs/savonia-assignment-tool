@@ -15,21 +15,25 @@ public class FilesPackCommand : Command
 
     public FilesPackCommand() : base("pack", "Pack selected files and folders to a zip package. Preserves folder structure.")
     {
-        var destinationZipArgument = new Argument<string?>(
-            name: "destinationZipFile",
-            description: "Destination zip file. By default the zip file is named the same as the source folder name.",
-            getDefaultValue: () => null);
+        var destinationZipArgument = new Argument<string?>("destinationZipFile")
+        {
+            Description = "Destination zip file. By default the zip file is named the same as the source folder name.",
+            DefaultValueFactory = _ => null
+        };
 
         Add(CommonArguments.SourcePathArgument);
         Add(destinationZipArgument);
         Add(CommonOptions.ExcludesOption);
         Add(CommonOptions.IncludesOption);
 
-        this.SetHandler(async (source, output, includes, excludes, verbose) =>
+        this.SetAction(async (parseResult) =>
         {
-            await Handle(source!, output ?? $"{source.Name}.zip", includes, excludes, verbose);
-        },
-        CommonArguments.SourcePathArgument, destinationZipArgument, CommonOptions.IncludesOption, CommonOptions.ExcludesOption, GlobalOptions.VerboseOption);
+            await Handle(parseResult.GetValue(CommonArguments.SourcePathArgument)!,
+                            parseResult.GetValue(destinationZipArgument)!,
+                            parseResult.GetValue(CommonOptions.IncludesOption),
+                            parseResult.GetValue(CommonOptions.ExcludesOption),
+                            parseResult.GetValue(GlobalOptions.VerboseOption));
+        });
     }
 
     async Task Handle(DirectoryInfo path,

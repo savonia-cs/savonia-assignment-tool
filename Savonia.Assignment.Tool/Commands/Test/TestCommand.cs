@@ -8,7 +8,7 @@ public class TestCommand : Command
 {
     public TestCommand() : base("test", "Work with (unit)testing")
     {
-        AddCommand(new TestTrxToMdCommand());
+        Add(new TestTrxToMdCommand());
         // AddCommand(new CsvReadCommand());
     }
 }

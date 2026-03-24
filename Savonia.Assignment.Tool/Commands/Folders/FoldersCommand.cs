@@ -8,7 +8,7 @@ public class FoldersCommand : Command
 {
     public FoldersCommand() : base("folders", "Work with folders")
     {
-        AddCommand(new FoldersDeleteCommand());
+        Add(new FoldersDeleteCommand());
     }
 }
 

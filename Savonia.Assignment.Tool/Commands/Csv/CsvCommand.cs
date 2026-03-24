@@ -8,8 +8,8 @@ public class CsvCommand : Command
 {
     public CsvCommand() : base("csv", "Work with CSV (Comma-separated values) files")
     {
-        AddCommand(new CsvParseCommand());
-        AddCommand(new CsvReadCommand());
+        Add(new CsvParseCommand());
+        Add(new CsvReadCommand());
     }
 }
 

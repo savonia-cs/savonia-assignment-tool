@@ -23,20 +23,22 @@ class Program
 {
     static async Task<int> Main(string[] args)
     {
-        var rootCommand = new RootCommand("Savonia tool for assignments");
-        rootCommand.AddGlobalOption(GlobalOptions.VerboseOption);
+        var rootCommand = new RootCommand("Savonia tool for assignments")
+        {
+            new SolutionCommand(),
+            new SubmissionsCommand(),
+            new HashCommand(),
+            new CsvCommand(),
+            new FilesCommand(),
+            new FoldersCommand(),
+            new TestCommand(),
+            new LearnCommand()
+        };
 
-        rootCommand.AddCommand(new SolutionCommand());
-        rootCommand.AddCommand(new SubmissionsCommand());
-        rootCommand.AddCommand(new HashCommand());
-        rootCommand.AddCommand(new CsvCommand());
-        rootCommand.AddCommand(new FilesCommand());
-        rootCommand.AddCommand(new FoldersCommand());
-        rootCommand.AddCommand(new TestCommand());
-        rootCommand.AddCommand(new LearnCommand());
+        rootCommand.Options.Add(GlobalOptions.VerboseOption);
 
-
-        return await rootCommand.InvokeAsync(args);
+        ParseResult parseResult = rootCommand.Parse(args);
+        return await parseResult.InvokeAsync();
     }
 }
 

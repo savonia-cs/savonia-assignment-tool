@@ -10,17 +10,18 @@ public class HashCommand : Command
 
     public HashCommand() : base("hash", "Create hashes from files and operate on them.")
     {
-        AddCommand(new HashCreateCommand());
-        AddCommand(new HashCompareCommand());
-        AddCommand(new HashOpenCommand());
+        Add(new HashCreateCommand());
+        Add(new HashCompareCommand());
+        Add(new HashOpenCommand());
     }
 
     static HashCommand()
     {
-        HashIndexOption = new Option<int?>(
-            name: "--hash-index",
-            description: "Column index (zero-based) for the hash column. Null value assumes that hash is in the last column.",
-            getDefaultValue: () => null);
+        HashIndexOption = new Option<int?>("--hash-index")
+        {
+            Description = "Column index (zero-based) for the hash column. Null value assumes that hash is in the last column.",
+            DefaultValueFactory = _ => null
+        };
     }
 }
 

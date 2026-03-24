@@ -20,72 +20,79 @@ public class SubmissionsTestSummaryCommand : Command
 
     public SubmissionsTestSummaryCommand() : base("summary", "Collect test run summaries in submission folders and create summary file.")
     {
-
-        var resultSummaryArgument = new Argument<string?>(
-            name: "resultSummaryCsvFile",
-            description: "Result summary file. By default the csv file is named the same as the source folder name.",
-            getDefaultValue: () => null);
-
-        var testSummaryFileOption = new Option<string>(
-            name: "--test-summary-file",
-            description: "Test summary file name to read each submission's test run summary from.",
-            getDefaultValue: () => "testrunsummary.json");
-
-        var resultSummaryIsCSVOption = new Option<bool>(
-            name: "--csv",
-            description: "Result summary file is CSV file by default. Set to false to create TSV file.",
-            getDefaultValue: () => true);
-
-        var selectedSubmissionsOption = new Option<List<string>?>(
-            name: "--selected-submissions",
-            description: "Set index number of submission folders to include in summary. Use 'submissions list' command to see the numbers. Use single number (i.e. 3 4 8) to select individual folders. Use dash (-) to select a range of folders (i.e. 1-10 14-16) or use dash with one number to select from start or to end (i.e. -10 15-). Leave empty to select all folders.",
-            getDefaultValue: () => new List<string> { })
+        var resultSummaryArgument = new Argument<string?>("resultSummaryCsvFile")
         {
+            Description = "Result summary file. By default the csv file is named the same as the source folder name.",
+            DefaultValueFactory = parseResult => null
+        };
+
+        var testSummaryFileOption = new Option<string>("--test-summary-file")
+        {
+            Description = "Test summary file name to read each submission's test run summary from.",
+            DefaultValueFactory = ParseResult => "testrunsummary.json"
+        };
+
+        var resultSummaryIsCSVOption = new Option<bool>("--csv")
+        {
+            Description = "Result summary file is CSV file by default. Set to false to create TSV file.",
+            DefaultValueFactory = ParseResult => true
+        };
+
+        var selectedSubmissionsOption = new Option<List<string>?>("--selected-submissions")
+        {
+            Description = "Set index number of submission folders to include in summary. Use 'submissions list' command to see the numbers. Use single number (i.e. 3 4 8) to select individual folders. Use dash (-) to select a range of folders (i.e. 1-10 14-16) or use dash with one number to select from start or to end (i.e. -10 15-). Leave empty to select all folders.",
+            DefaultValueFactory = ParseResult => new List<string> { },
             AllowMultipleArgumentsPerToken = true
         };
 
-        var moodleCsvFileOption = new Option<FileInfo?>(
-            name: "--moodle-csv",
-            description: "A CSV file from Moodle LMS to combine the results with. When set, the results are combined to the defined file. The file is expected to contain submissions info from Moodle.",
-            getDefaultValue: () => null);
-
-        moodleCsvFileOption.AddValidator(result =>
+        var moodleCsvFileOption = new Option<FileInfo?>("--moodle-csv")
         {
-            var fi = result.GetValueForOption(moodleCsvFileOption);
+            Description = "A CSV file from Moodle LMS to combine the results with. When set, the results are combined to the defined file. The file is expected to contain submissions info from Moodle.",
+            DefaultValueFactory = ParseResult => null
+        };
+    
+        moodleCsvFileOption.Validators.Add(result =>
+        {
+            var fi = result.GetValueOrDefault<FileInfo>();
             if (fi is not null)
             {
                 var file = fi.FullName ?? string.Empty;
                 if (false == File.Exists(file))
                 {
-                    result.ErrorMessage = $"Moodle CSV file '{file}' does not exist.";
+                    result.AddError($"Moodle CSV file '{file}' does not exist.");
                 }
             }
         });
 
-        var moodleCsvStudentIdentifierRegexOption = new Option<string>(
-            name: "--moodle-csv-student-identifier-regex",
-            description: "A regex to get student identifier from submission folder name.",
-            getDefaultValue: () => "(?<=_)[0-9]+(?=_)");
+        var moodleCsvStudentIdentifierRegexOption = new Option<string>("--moodle-csv-student-identifier-regex")
+        {
+            Description = "A regex to get student identifier from submission folder name.",
+            DefaultValueFactory = ParseResult => "(?<=_)[0-9]+(?=_)"
+        };
 
-        var moodleCsvStudentIdentifierPrefixOption = new Option<string>(
-            name: "--moodle-csv-student-identifier-prefix",
-            description: "Prefix to append to the student identifier to match a row in the Moodle CSV file. By default this is 'Opiskelija' for Finnish CSV file and 'Participant ' for English CSV file (notice the white space in the English version!).",
-            getDefaultValue: () => "Opiskelija");
+        var moodleCsvStudentIdentifierPrefixOption = new Option<string>("--moodle-csv-student-identifier-prefix")
+        {
+            Description = "Prefix to append to the student identifier to match a row in the Moodle CSV file. By default this is 'Opiskelija' for Finnish CSV file and 'Participant ' for English CSV file (notice the white space in the English version!).",
+            DefaultValueFactory = ParseResult => "Opiskelija"
+        };
 
-        var moodleCsvAppendIdToFeedbackFieldOption = new Option<bool>(
-            name: "--moodle-csv-append-id-to-feedback",
-            description: "Append student identifier to the feedback field in Moodle CSV file.",
-            getDefaultValue: () => false);
+        var moodleCsvAppendIdToFeedbackFieldOption = new Option<bool>("--moodle-csv-append-id-to-feedback")
+        {
+            Description = "Append student identifier to the feedback field in Moodle CSV file.",
+            DefaultValueFactory = ParseResult => false
+        };
 
-        var moodleCsvFeedbackFieldIdPrefixOption = new Option<string>(
-            name: "--moodle-csv-feedback-id-prefix",
-            description: "Prefix text to add to student identifier in feedback field.",
-            getDefaultValue: () => "");
+        var moodleCsvFeedbackFieldIdPrefixOption = new Option<string>("--moodle-csv-feedback-id-prefix")
+        {
+            Description = "Prefix text to add to student identifier in feedback field.",
+            DefaultValueFactory = ParseResult => ""
+        };
 
-        var moodleCsvFeedbackFieldIdSuffixOption = new Option<string>(
-            name: "--moodle-csv-feedback-id-suffix",
-            description: "Suffix text to add to student identifier in feedback field.",
-            getDefaultValue: () => "");
+        var moodleCsvFeedbackFieldIdSuffixOption = new Option<string>("--moodle-csv-feedback-id-suffix")
+        {
+            Description = "Suffix text to add to student identifier in feedback field.",
+            DefaultValueFactory = ParseResult => ""
+        };
 
         Add(CommonArguments.SourcePathArgument);
         Add(resultSummaryArgument);
@@ -99,20 +106,20 @@ public class SubmissionsTestSummaryCommand : Command
         Add(moodleCsvFeedbackFieldIdPrefixOption);
         Add(moodleCsvFeedbackFieldIdSuffixOption);
 
-        this.SetHandler(async (context) =>
+        this.SetAction(async (parseResult) =>
             {
-                await Handle(context.ParseResult.GetValueForArgument(CommonArguments.SourcePathArgument)!,
-                                 context.ParseResult.GetValueForArgument(resultSummaryArgument)!,
-                                 context.ParseResult.GetValueForOption(testSummaryFileOption)!,
-                                 context.ParseResult.GetValueForOption(resultSummaryIsCSVOption),
-                                 context.ParseResult.GetValueForOption(selectedSubmissionsOption),
-                                 context.ParseResult.GetValueForOption(moodleCsvFileOption),
-                                 context.ParseResult.GetValueForOption(moodleCsvStudentIdentifierRegexOption)!,
-                                 context.ParseResult.GetValueForOption(moodleCsvStudentIdentifierPrefixOption)!,
-                                 context.ParseResult.GetValueForOption(moodleCsvAppendIdToFeedbackFieldOption),
-                                 context.ParseResult.GetValueForOption(moodleCsvFeedbackFieldIdPrefixOption),
-                                 context.ParseResult.GetValueForOption(moodleCsvFeedbackFieldIdSuffixOption),
-                                 context.ParseResult.GetValueForOption(GlobalOptions.VerboseOption));
+                await Handle(parseResult.GetValue(CommonArguments.SourcePathArgument)!,
+                                 parseResult.GetValue(resultSummaryArgument)!,
+                                 parseResult.GetValue(testSummaryFileOption)!,
+                                 parseResult.GetValue(resultSummaryIsCSVOption),
+                                 parseResult.GetValue(selectedSubmissionsOption),
+                                 parseResult.GetValue(moodleCsvFileOption),
+                                 parseResult.GetValue(moodleCsvStudentIdentifierRegexOption)!,
+                                 parseResult.GetValue(moodleCsvStudentIdentifierPrefixOption)!,
+                                 parseResult.GetValue(moodleCsvAppendIdToFeedbackFieldOption),
+                                 parseResult.GetValue(moodleCsvFeedbackFieldIdPrefixOption),
+                                 parseResult.GetValue(moodleCsvFeedbackFieldIdSuffixOption),
+                                 parseResult.GetValue(GlobalOptions.VerboseOption));
             });
     }
 

@@ -16,32 +16,35 @@ public class LearnReadCommand : Command
     
     public LearnReadCommand() : base("read", "Read user's public MS Learn achievements.")
     {
-        var usernameArgument = new Argument<string>("username", "The username of the user to read achievements for.");
+        var usernameArgument = new Argument<string>("username")
+        {
+            Description = "The username of the user to read achievements for."
+        };
 
-        var outputOption = new Option<string?>(
-            name: "--output",
-            description: "Output json file. This will overwrite possible existing file.",
-            getDefaultValue: () => null);
-        outputOption.AddAlias("-o");
+        var outputOption = new Option<string?>("--output", ["-o"])
+        {
+            Description = "Output json file. This will overwrite possible existing file.",
+            DefaultValueFactory = _ => null
+        };
 
-        var useKVPFormatOption = new Option<bool>(
-            name: "--key-value-pair",
-            description: "Write output as key-value-pair where the key is achievement id and value is achievement title. Default is false.",
-            getDefaultValue: () => false);
-        useKVPFormatOption.AddAlias("-k");
+        var useKVPFormatOption = new Option<bool>("--key-value-pair", ["-k"])
+        {
+            Description = "Write output as key-value-pair where the key is achievement id and value is achievement title. Default is false.",
+            DefaultValueFactory = _ => false
+        };
 
         Add(usernameArgument);
-        AddOption(outputOption);
-        AddOption(useKVPFormatOption);
+        Add(outputOption);
+        Add(useKVPFormatOption);
 
-        this.SetHandler(async (context) =>
+        this.SetAction(async parseResult =>
             {
-                string input = context.ParseResult.GetValueForArgument(usernameArgument)!;
-                string? output = context.ParseResult.GetValueForOption(outputOption);
+                string input = parseResult.GetValue(usernameArgument)!;
+                string? output = parseResult.GetValue(outputOption);
 
                 await Handle(input, output,
-                                context.ParseResult.GetValueForOption(useKVPFormatOption),
-                                context.ParseResult.GetValueForOption(GlobalOptions.VerboseOption));
+                                parseResult.GetValue(useKVPFormatOption),
+                                parseResult.GetValue(GlobalOptions.VerboseOption));
             });
     }
 

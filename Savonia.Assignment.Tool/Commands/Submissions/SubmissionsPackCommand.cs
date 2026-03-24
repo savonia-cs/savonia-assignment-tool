@@ -9,21 +9,24 @@ public class SubmissionsPackCommand : Command
 {
     public SubmissionsPackCommand() : base("pack", "Pack (zip) all submission folders to zip files in defined source folder. Creates a zip file for each folder and packs the content of the folder excluding the folder itself. Uses the folder name as the name of the zip file and overwrites possible existing file.")
     {
-        var zipOutputOption = new Option<string?>(
-        name: "--output",
-        description: "Output zip file. When defined the included result is packed to a single zip file. Can be used to pack all submission zip files to a single zip file. This will overwrite possible existing file.",
-        getDefaultValue: () => null);
-        zipOutputOption.AddAlias("-o");
+        var zipOutputOption = new Option<string?>("--output", ["-o"])
+        {
+            Description = "Output zip file. When defined the included result is packed to a single zip file. Can be used to pack all submission zip files to a single zip file. This will overwrite possible existing file.",
+            DefaultValueFactory = parseResult => null
+        };
 
         Add(CommonArguments.SourcePathArgument);
-        AddOption(zipOutputOption);
-        AddOption(CommonOptions.IncludesOption);
-        AddOption(CommonOptions.ExcludesOption);
-        this.SetHandler(async (path, includes, excludes, output, verbose) =>
+        Add(zipOutputOption);
+        Add(CommonOptions.IncludesOption);
+        Add(CommonOptions.ExcludesOption);
+        this.SetAction(async parseResult =>
             {
-                await Handle(path!, includes, excludes, output, verbose);
-            },
-            CommonArguments.SourcePathArgument, CommonOptions.IncludesOption, CommonOptions.ExcludesOption, zipOutputOption, GlobalOptions.VerboseOption);
+                await Handle(parseResult.GetValue(CommonArguments.SourcePathArgument)!,
+                             parseResult.GetValue(CommonOptions.IncludesOption),
+                             parseResult.GetValue(CommonOptions.ExcludesOption),
+                             parseResult.GetValue(zipOutputOption),
+                             parseResult.GetValue(GlobalOptions.VerboseOption));
+            });
     }
 
     async Task Handle(DirectoryInfo path, List<string> includes, List<string> excludes, string? output, bool verbose)

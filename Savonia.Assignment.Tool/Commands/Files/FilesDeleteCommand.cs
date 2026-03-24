@@ -15,23 +15,25 @@ public class FilesDeleteCommand : Command
 
     public FilesDeleteCommand() : base("delete", "Delete files. Can be used to delete selected files.")
     {
-        Option<bool> listOnlyOption = new Option<bool>(
-            name: "--list",
-            description: "List only. Defaults to true to lists files that would be deleted. Does not delete files! To delete files, use --list false (or -l false).",
-            getDefaultValue: () => true
-        );
-        listOnlyOption.AddAlias("-l");
+        Option<bool> listOnlyOption = new Option<bool>("--list", ["-l"])
+        {
+            Description = "List only. Defaults to true to lists files that would be deleted. Does not delete files! To delete files, use --list false (or -l false).",
+            DefaultValueFactory = _ => true
+        };
 
         Add(CommonArguments.SourcePathRequiredArgument);
         Add(CommonOptions.ExcludesOption);
         Add(CommonOptions.IncludesOption);
         Add(listOnlyOption);
 
-        this.SetHandler(async (source, includes, excludes, listOnly, verbose) =>
+        this.SetAction(async parseResult =>
             {
-                await Handle(source!, includes, excludes, listOnly, verbose);
-            },
-            CommonArguments.SourcePathRequiredArgument, CommonOptions.IncludesOption, CommonOptions.ExcludesOption, listOnlyOption, GlobalOptions.VerboseOption);
+                await Handle(parseResult.GetValue(CommonArguments.SourcePathRequiredArgument)!,
+                                parseResult.GetValue(CommonOptions.IncludesOption),
+                                parseResult.GetValue(CommonOptions.ExcludesOption),
+                                parseResult.GetValue(listOnlyOption),
+                                parseResult.GetValue(GlobalOptions.VerboseOption));
+            });
     }
 
     async Task Handle(DirectoryInfo source,

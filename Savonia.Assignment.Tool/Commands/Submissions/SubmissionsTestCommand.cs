@@ -14,10 +14,10 @@ public class SubmissionsTestCommand : Command
     
     public SubmissionsTestCommand() : base("test", "Work with tests on submissions")
     {
-        AddCommand(new SubmissionsTestCopyCommand());
-        AddCommand(new SubmissionsTestRunCommand());
-        AddCommand(new SubmissionsTestSummaryCommand());
-        AddCommand(new SubmissionsTestConvertCommand());
+        Add(new SubmissionsTestCopyCommand());
+        Add(new SubmissionsTestRunCommand());
+        Add(new SubmissionsTestSummaryCommand());
+        Add(new SubmissionsTestConvertCommand());
     }
 
     internal static DirectoryInfo[] SelectSubmissionFolders(DirectoryInfo path, List<string>? selectedSubmissions, bool verbose)

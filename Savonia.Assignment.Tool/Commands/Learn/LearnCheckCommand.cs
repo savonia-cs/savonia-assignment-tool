@@ -16,123 +16,129 @@ public class LearnCheckCommand : Command
 
     public LearnCheckCommand() : base("check", "Check that required achievements are completed for users.")
     {
-        var requirementsArgument = new Argument<FileInfo>(
-            name: "requirementsJsonFile",
-            description: "JSON file containing required achievements as JSON key-value-pairs where the key is achievements type id and value is achievement title.",
-            parse: result =>
+        var requirementsArgument = new Argument<FileInfo>("requirementsJsonFile")
+        {
+            Description = "JSON file containing required achievements as JSON key-value-pairs where the key is achievements type id and value is achievement title.",
+            DefaultValueFactory = parseResult =>
             {
-                if (result.Tokens.Count == 0)
+                if (parseResult.Tokens.Count == 0)
                 {
-                    result.ErrorMessage = "Requirements JSON file is not specified.";
-                    return null;
+                    parseResult.AddError("Requirements JSON file is not specified.");
+                    return default;
                 }
-                string? filePath = result.Tokens.Single().Value;
+                string? filePath = parseResult.Tokens.Single().Value;
                 if (!File.Exists(filePath))
                 {
-                    result.ErrorMessage = "Requirements JSON file does not exist";
-                    return null;
+                    parseResult.AddError("Requirements JSON file does not exist");
+                    return default;
                 }
                 else
                 {
                     return new FileInfo(filePath);
                 }
-            });
+            }
+        };
 
-        var outputOption = new Option<string?>(
-            name: "--output",
-            description: "Output csv file. This will overwrite possible existing file. By default the output file is named the same as source file with \"-result.csv\" appended to the end.",
-            getDefaultValue: () => null);
-        outputOption.AddAlias("-o");
-
-        var inputCsvHasHeaderOption = new Option<bool>(
-            name: "--input-has-header",
-            description: "Set to true when the input CSV file has header row.",
-            getDefaultValue: () => true);
-
-        var inputCsvDelimiterOption = new Option<string>(
-            name: "--input-delimiter",
-            description: "Delimiter for the input CSV file.",
-            getDefaultValue: () => ",");
-
-        var usernameFieldOption = new Option<string>(
-            name: "--username-field",
-            description: "Field where the username is read. Use one-based (i.e. first field is one (1)) field number or field header to select. Defaults to field number 9 which is default field for Moodle LMS export file for assingment submissions text.",
-            getDefaultValue: () => "9");
-
-        var gradeFieldOption = new Option<string>(
-            name: "--grade-field",
-            description: "Field where the grade is written. Use one-based (i.e. first field is one (1)) field number or field header to select. Defaults to field number 5 which is default field for Moodle LMS export file for assingment grade.",
-            getDefaultValue: () => "5");
-
-        var gradeOption = new Option<string>(
-            name: "--grade",
-            description: "Grade value to write when all requirements are met. Defaults to number 1.",
-            getDefaultValue: () => "1");
-
-        var commentsFieldOption = new Option<string>(
-            name: "--comments-field",
-            description: "Field where the comments is written. Use one-based (i.e. first field is one (1)) field number or field header to select. Defaults to field number 11 which is default field for Moodle LMS export file for assingment feedback comments.",
-            getDefaultValue: () => "11");
-
-        var fieldFiltersOption = new Option<List<string>>(
-            name: "--field-filters",
-            description: "Field regex filter. Set in pairs where first value is field number or name and the second is the regex (e.g. --field-filters 3 \\d+ to select first numbers from field 3). Use predefined regex filter values: URL to filter urls or regex name(s) defined in --regexes option. Leave to empty to select field data as is.",
-            getDefaultValue: () => new List<string>())
+        var outputOption = new Option<string?>("--output", ["-o"])
         {
+            Description = "Output csv file. This will overwrite possible existing file. By default the output file is named the same as source file with \"-result.csv\" appended to the end.",
+            DefaultValueFactory = _ => null
+        };
+
+        var inputCsvHasHeaderOption = new Option<bool>("--input-has-header")
+        {
+            Description = "Set to true when the input CSV file has header row.",
+            DefaultValueFactory = _ => true
+        };
+
+        var inputCsvDelimiterOption = new Option<string>("--input-delimiter")
+        {
+            Description = "Delimiter for the input CSV file.",
+            DefaultValueFactory = _ => ","
+        };
+
+        var usernameFieldOption = new Option<string>("--username-field")
+        {
+            Description = "Field where the username is read. Use one-based (i.e. first field is one (1)) field number or field header to select. Defaults to field number 9 which is default field for Moodle LMS export file for assingment submissions text.",
+            DefaultValueFactory = _ => "9"
+        };
+
+        var gradeFieldOption = new Option<string>("--grade-field")
+        {
+            Description = "Field where the grade is written. Use one-based (i.e. first field is one (1)) field number or field header to select. Defaults to field number 5 which is default field for Moodle LMS export file for assingment grade.",
+            DefaultValueFactory = _ => "5"
+        };
+
+        var gradeOption = new Option<string>("--grade")
+        {
+            Description = "Grade value to write when all requirements are met. Defaults to number 1.",
+            DefaultValueFactory = _ => "1"
+        };
+
+        var commentsFieldOption = new Option<string>("--comments-field")
+        {
+            Description = "Field where the comments is written. Use one-based (i.e. first field is one (1)) field number or field header to select. Defaults to field number 11 which is default field for Moodle LMS export file for assingment feedback comments.",
+            DefaultValueFactory = _ => "11"
+        };
+
+        var fieldFiltersOption = new Option<List<string>>("--field-filters")
+        {
+            Description = "Field regex filter. Set in pairs where first value is field number or name and the second is the regex (e.g. --field-filters 3 \\d+ to select first numbers from field 3). Use predefined regex filter values: URL to filter urls or regex name(s) defined in --regexes option. Leave to empty to select field data as is.",
+            DefaultValueFactory = _ => [],
             AllowMultipleArgumentsPerToken = true
         };
 
-        var regexInputOption = new Option<FileInfo?>(
-            name: "--regexes",
-            description: "A JSON file containing key-value pair (a dictionary) of regexes to filter/parse CSV column values. Key is the regex \"name\" and value is the regex \"pattern\".",
-            isDefault: true,
-            parseArgument: result =>
+        var regexInputOption = new Option<FileInfo?>("--regexes")
+        {
+            Description = "A JSON file containing key-value pair (a dictionary) of regexes to filter/parse CSV column values. Key is the regex \"name\" and value is the regex \"pattern\".",
+            DefaultValueFactory = parseResult =>
             {
-                if (result.Tokens.Count == 0)
+                if (parseResult.Tokens.Count == 0)
                 {
                     // no regexes defined
                     return null;
                 }
-                string? filePath = result.Tokens.Single().Value;
+                string? filePath = parseResult.Tokens.Single().Value;
                 if (!File.Exists(filePath))
                 {
-                    result.ErrorMessage = "Regexes JSON file does not exist";
+                    parseResult.AddError("Regexes JSON file does not exist");
                     return null;
                 }
                 else
                 {
                     return new FileInfo(filePath);
                 }
-            });
+            }
+        };
 
         Add(CommonArguments.SourceCsvFileArgument);
         Add(requirementsArgument);
-        AddOption(outputOption);
-        AddOption(inputCsvHasHeaderOption);
-        AddOption(inputCsvDelimiterOption);
-        AddOption(usernameFieldOption);
-        AddOption(gradeFieldOption);
-        AddOption(gradeOption);
-        AddOption(commentsFieldOption);
-        AddOption(fieldFiltersOption);
-        AddOption(regexInputOption);
+        Add(outputOption);
+        Add(inputCsvHasHeaderOption);
+        Add(inputCsvDelimiterOption);
+        Add(usernameFieldOption);
+        Add(gradeFieldOption);
+        Add(gradeOption);
+        Add(commentsFieldOption);
+        Add(fieldFiltersOption);
+        Add(regexInputOption);
 
-        this.SetHandler(async (context) =>
+        this.SetAction(async parseResult =>
             {
-                FileInfo input = context.ParseResult.GetValueForArgument(CommonArguments.SourceCsvFileArgument)!;
-                string? output = context.ParseResult.GetValueForOption(outputOption) ?? $"{Path.GetFileNameWithoutExtension(input.Name)}-result.csv";
+                FileInfo input = parseResult.GetValue(CommonArguments.SourceCsvFileArgument)!;
+                string? output = parseResult.GetValue(outputOption) ?? $"{Path.GetFileNameWithoutExtension(input.Name)}-result.csv";
 
                 await Handle(input, output,
-                                context.ParseResult.GetValueForArgument(requirementsArgument)!,
-                                context.ParseResult.GetValueForOption(inputCsvDelimiterOption)!,
-                                context.ParseResult.GetValueForOption(inputCsvHasHeaderOption),
-                                context.ParseResult.GetValueForOption(usernameFieldOption)!,
-                                context.ParseResult.GetValueForOption(gradeFieldOption)!,
-                                context.ParseResult.GetValueForOption(gradeOption)!,
-                                context.ParseResult.GetValueForOption(commentsFieldOption)!,
-                                context.ParseResult.GetValueForOption(fieldFiltersOption)!,
-                                context.ParseResult.GetValueForOption(regexInputOption),
-                                context.ParseResult.GetValueForOption(GlobalOptions.VerboseOption));
+                                parseResult.GetValue(requirementsArgument)!,
+                                parseResult.GetValue(inputCsvDelimiterOption)!,
+                                parseResult.GetValue(inputCsvHasHeaderOption),
+                                parseResult.GetValue(usernameFieldOption)!,
+                                parseResult.GetValue(gradeFieldOption)!,
+                                parseResult.GetValue(gradeOption)!,
+                                parseResult.GetValue(commentsFieldOption)!,
+                                parseResult.GetValue(fieldFiltersOption)!,
+                                parseResult.GetValue(regexInputOption),
+                                parseResult.GetValue(GlobalOptions.VerboseOption));
             });
     }
 

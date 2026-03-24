@@ -15,11 +15,12 @@ public static class GlobalOptions
     public static readonly Option<bool> VerboseOption;
     static GlobalOptions()
     {
-        VerboseOption = new Option<bool>(
-            name: "--verbose",
-            description: "Show verbose output.",
-            getDefaultValue: () => false);
-        VerboseOption.AddAlias("-v");
+        VerboseOption = new Option<bool>("--verbose", ["-v"])
+        {
+            Description = "Show verbose output.",
+            DefaultValueFactory = _ => false,
+            Recursive = true
+        };
     }
 }
 
